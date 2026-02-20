@@ -1,5 +1,7 @@
+
 use crate::{get_usr_input, gui::loop_separator, quit, state::GameState};
 
+pub mod tech;
 mod gui;
 
 /// The main game loop - advances the game state increment_timer by 1

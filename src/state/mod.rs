@@ -1,5 +1,7 @@
-use std::collections::BTreeMap;
+use research_state::ResearchState;
 
+
+pub mod research_state;
 
 pub struct State {
     pub run_game: bool,
@@ -20,8 +22,8 @@ impl Default for State {
 }
 
 pub struct GameState {
-    // I know, unix timestamp is way overkill - u16 is only 18h of gameplay though
-    pub increment_timer: u32,
+    // This supports 584 billion years, way to large, but better than u32 (136 years)  (assuming only 365 day years with perfect 24h per day)
+    pub increment_timer: u64,
     pub company_name: String,
     pub money: u32,
     pub reputation: u32,
@@ -38,76 +40,6 @@ impl Default for GameState {
             research_state: ResearchState::default(),
         }
     }
-}
-
-pub struct ResearchState {
-    pub research_points: ResearchPoints,
-    pub researched_technologies: BTreeMap<String, Technology>,
-    pub available_technologies: BTreeMap<String, Technology>,
-    pub locked_technologies: BTreeMap<String, Technology>,
-}
-
-impl Default for ResearchState {
-    fn default() -> Self {
-        Self {
-            research_points: ResearchPoints::default(),
-            researched_technologies: BTreeMap::new(),
-            available_technologies: generate_default_technologies(),
-            locked_technologies: generate_default_locked_technologies(),
-        }
-    }
-}
-
-fn generate_default_technologies() -> BTreeMap<String, Technology> {
-    let mut technologies = BTreeMap::new();
-    technologies.insert(String::from("test"), Technology::default());
-    technologies
-}
-
-fn generate_default_locked_technologies() -> BTreeMap<String, Technology> {
-    let mut technologies = BTreeMap::new();
-    technologies.insert(String::from("test"), Technology::default());
-    technologies
-}
-
-pub struct Technology {
-    pub name: String,
-    pub description: String,
-    pub cost: u32,
-    pub invested_research_points: u32,
-    pub technology_type: TechnologyType,
-    pub required_technologies: Vec<String>,
-}
-
-impl Default for Technology {
-    fn default() -> Self {
-        Self {
-            name: String::from("test"),
-            description: String::from("test"),
-            cost: 0,
-            invested_research_points: 0,
-            technology_type: TechnologyType::HeavyEngineering,
-            required_technologies: Vec::new(),
-        }
-    }
-}
-
-pub enum TechnologyType {
-    HeavyEngineering,
-    LightEngineering,
-    Propulsion,
-    Navigation,
-    Communication,
-    Weapons,
-    Sensors,
-    Shield,
-    Armor,
-    Hull,
-    Cargo,
-    Crew,
-    Power,
-    LifeSupport,
-    Maintenance,
 }
 
 pub struct ResearchPoints {
