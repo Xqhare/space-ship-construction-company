@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+aequa = {git = "https://github.com/xqhare/aequa"}
+nemesis = {git = "https://github.com/xqhare/nemesis"}

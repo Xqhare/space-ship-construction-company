@@ -3,5 +3,19 @@
 version = 4
 
 [[package]]
+name = "aequa"
+version = "1.2.2"
+source = "git+https://github.com/xqhare/aequa#562516427c2779af4fef3063bc16c0e0885b71b7"
+
+[[package]]
+name = "nemesis"
+version = "1.0.0"
+source = "git+https://github.com/xqhare/nemesis#b9270897bdac1b3377c6f57edaa9d7e4fee60483"
+
+[[package]]
 name = "space-ship-construction-company"
 version = "0.1.0"
+dependencies = [
+ "aequa",
+ "nemesis",
+]
