@@ -1,4 +1,1 @@
-
-pub struct ResearchTree {
-    pub 
-}
+pub struct ResearchTree {}
