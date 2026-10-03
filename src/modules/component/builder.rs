@@ -2,7 +2,7 @@ use aequa::{Object, XffValue};
 
 use crate::{
     error::{SSCCResult, new_component_builder_error},
-    modules::{component::Component, modifiers::Modifier},
+    modules::{capabilites::Capability, component::Component, modifiers::Modifier},
 };
 #[non_exhaustive]
 #[derive(Debug, Clone)]
@@ -32,6 +32,10 @@ impl ComponentBuilder {
     }
     pub fn add_base_value<S: Into<String>>(mut self, key: S, value: XffValue) -> Self {
         self.inner.add_base_value(key, value);
+        self
+    }
+    pub fn add_capability(mut self, capability: Capability) -> Self {
+        self.inner.add_capability(capability);
         self
     }
     pub fn build(self) -> SSCCResult<Component> {

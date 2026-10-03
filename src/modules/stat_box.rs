@@ -1,4 +1,4 @@
-use aequa::{Object, XffValue, hp_float::HpFloat};
+use aequa::{Object, XffValue, hp_float::HpFloat, xff};
 
 use crate::modules::{
     component::Component,
@@ -8,7 +8,7 @@ use crate::modules::{
 pub struct StatBox {
     /// Base values (no modifiers)
     /// Range: -inf - inf
-    /// Technically (HpFloat): i128::MAX/MIN * 10^u32::MAX
+    /// Technically (HpFloat): i128::MAX/MIN * 10^0/u32::MAX
     base_values: Object,
     /// Any modifier that modifies the base values
     /// Range: -1.0 - 1.0
@@ -122,8 +122,23 @@ impl StatBox {
     /// If a base value with the key exists, it will be overwritten
     ///
     /// Does not update unused modifiers, use `update_unused_modifiers` after calling this.
-    pub fn add_base_value<S: Into<String>>(&mut self, key: S, value: XffValue) {
-        self.base_values.insert(key, value);
+    pub fn add_base_value<S: Into<String>>(&mut self, key: S, value: &HpFloat) {
+        self.base_values.insert(key, xff!(*value));
+        self.update_unused_modifiers();
+    }
+    /// Add or update a base value.
+    /// If a base value with the key exists, it's value and the new value will be added
+    /// together for a final value.
+    /// If a base value with the key does not exist, it will be added.
+    pub fn add_or_update_base_value<S: Into<String>>(&mut self, key: S, value: &HpFloat) {
+        let key = key.into();
+        if let Some(old_value) = self.base_values.get_mut(&key) {
+            if let Some(old_value_cast) = old_value.into_hp_float() {
+                *old_value = xff!(old_value_cast + *value);
+            }
+        } else {
+            self.base_values.insert(key, xff!(*value));
+        }
         self.update_unused_modifiers();
     }
     /// Iterate through all unused modifiers and check if a base value exists they can modify.
@@ -173,7 +188,8 @@ impl StatBox {
         }
     }
     pub fn add_component(&mut self, component: &Component) {
-        for (base_value_name, base_value_value) in component.stat_box.base_values.iter() {
+        let stat_box = component.get_stat_box();
+        for (base_value_name, base_value_value) in stat_box.base_values.iter() {
             let base_value_value = base_value_value
                 .as_hp_float()
                 .expect("Base value is not a number");
@@ -187,16 +203,16 @@ impl StatBox {
                     .insert(base_value_name.clone(), *base_value_value);
             }
         }
-        for modifier in component.stat_box.modifiers.iter() {
+        for modifier in stat_box.modifiers.iter() {
             self.add_modifier(modifier.clone());
         }
-        for modifier in component.stat_box.flat_modifiers.iter() {
+        for modifier in stat_box.flat_modifiers.iter() {
             self.add_modifier(modifier.clone());
         }
-        for unused_modifier in component.stat_box.unused_modifiers.iter() {
+        for unused_modifier in stat_box.unused_modifiers.iter() {
             self.add_modifier(unused_modifier.clone());
         }
-        for unused_flat_modifier in component.stat_box.unused_flat_modifiers.iter() {
+        for unused_flat_modifier in stat_box.unused_flat_modifiers.iter() {
             self.add_modifier(unused_flat_modifier.clone());
         }
         self.update_unused_modifiers();
@@ -206,7 +222,7 @@ impl StatBox {
 #[test]
 fn simple_stat_box() {
     let mut stat_box = StatBox::new();
-    stat_box.add_base_value("health", HpFloat::from(10.0).into());
+    stat_box.add_base_value("health", &HpFloat::from(10.0));
     let modifier = Modifier {
         impacted_base_value_name: "health".to_string(),
         kind: ModifierType::Percentage,
@@ -236,7 +252,7 @@ fn simple_stat_box() {
     stat_box.add_modifier(unused_flat_modifier);
     let result = stat_box.get_full_stats();
     assert!(result.len() == 1);
-    stat_box.add_base_value("weight", HpFloat::from(5.0).into());
+    stat_box.add_base_value("weight", &HpFloat::from(5.0));
     let result = stat_box.get_full_stats();
     assert!(result.len() == 2);
 

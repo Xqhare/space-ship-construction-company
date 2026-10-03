@@ -8,12 +8,19 @@ pub type SSCCResult<T> = Result<T, NemesisError>;
 pub enum SSCCError {
     Generic(String),
     ComponentBuilder(String),
+    CapabilityBuilder(String),
     Io(std::io::Error),
 }
 
 pub fn new_component_builder_error() -> NemesisError {
     SSCCError::ComponentBuilder(
         "Component Builder was unable to successfully create a component".to_string(),
+    )
+    .into()
+}
+pub fn new_capability_builder_error() -> NemesisError {
+    SSCCError::CapabilityBuilder(
+        "Capability Builder was unable to successfully create a capability".to_string(),
     )
     .into()
 }
@@ -29,6 +36,7 @@ impl std::error::Error for SSCCError {
         match self {
             SSCCError::Generic(msg) => msg,
             SSCCError::ComponentBuilder(msg) => msg,
+            SSCCError::CapabilityBuilder(msg) => msg,
             SSCCError::Io(_) => "IO Error",
         }
     }
@@ -39,6 +47,7 @@ impl From<SSCCError> for NemesisError {
         let source = match err {
             SSCCError::Io(_) => "std::io::Error",
             SSCCError::ComponentBuilder(_) => "ComponentBuilder",
+            SSCCError::CapabilityBuilder(_) => "CapabilityBuilder",
             SSCCError::Generic(_) => "Generic",
         };
         // NOTE: This is a bit of a hack, but it works
@@ -56,6 +65,7 @@ impl fmt::Display for SSCCError {
         match self {
             SSCCError::Generic(msg) => write!(f, "{}", msg),
             SSCCError::ComponentBuilder(msg) => write!(f, "{}", msg),
+            SSCCError::CapabilityBuilder(msg) => write!(f, "{}", msg),
             SSCCError::Io(err) => write!(f, "{}", err),
         }
     }

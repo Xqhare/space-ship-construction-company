@@ -1,6 +1,4 @@
-use aequa::Object;
-
-use crate::modules::{Capability, component::Component};
+use crate::modules::{capabilites::Capability, component::Component, stat_box::StatBox};
 
 #[non_exhaustive]
 pub struct ShipClass {
@@ -8,12 +6,8 @@ pub struct ShipClass {
     name: String,
     /// Description
     description: String,
-    /// Base values (no modifiers)
-    base_values: Object,
-    /// Any modifier that modifies the base values
-    modifiers: Object,
-    /// Any modifier that does not modify the base values
-    unused_modifiers: Object,
+    /// Statistic properties of the class
+    stat_box: StatBox,
     /// Any capabilities
     capabilities: Vec<Capability>,
     /// Components that make up the class
