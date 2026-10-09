@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 aequa = {git = "https://github.com/xqhare/aequa"}
 nemesis = {git = "https://github.com/xqhare/nemesis"}
+horae = {git = "https://github.com/xqhare/horae"}
