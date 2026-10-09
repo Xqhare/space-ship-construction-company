@@ -163,7 +163,9 @@ impl Component {
     ///
     /// Base value is additive. Multiple components with the same modifier will stack
     pub fn add_component(&mut self, component: Component) {
-        self.capabilities.extend(component.capabilities.clone());
+        for capability in component.get_capabilities() {
+            self.add_capability(capability.clone());
+        }
         self.stat_box.add_component(&component);
         self.components.push(component);
     }
