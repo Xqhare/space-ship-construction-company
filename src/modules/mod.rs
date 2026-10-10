@@ -6,3 +6,4 @@ pub mod modifiers;
 pub mod science;
 pub mod ship_class;
 pub mod stat_box;
+pub mod tick;

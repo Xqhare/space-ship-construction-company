@@ -8,12 +8,28 @@ version = "1.2.2"
 source = "git+https://github.com/xqhare/aequa#f591a836a06e94e9ea05ff3f18c1925dcc905a60"
 
 [[package]]
+name = "athena"
+version = "2.1.0"
+source = "git+https://github.com/xqhare/athena#2f62f13da4416273ad269a6e3fbc3aebb3a917a0"
+dependencies = [
+ "aequa",
+ "libc",
+ "nemesis",
+]
+
+[[package]]
 name = "horae"
 version = "1.4.0"
 source = "git+https://github.com/xqhare/horae#ed06a2630367b907542fcff90a8fd493521992b2"
 dependencies = [
  "aequa",
 ]
+
+[[package]]
+name = "libc"
+version = "0.2.190"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
 
 [[package]]
 name = "nemesis"
@@ -25,6 +41,7 @@ name = "space-ship-construction-company"
 version = "0.1.0"
 dependencies = [
  "aequa",
+ "athena",
  "horae",
  "nemesis",
 ]

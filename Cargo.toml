@@ -7,3 +7,4 @@ edition = "2024"
 aequa = {git = "https://github.com/xqhare/aequa"}
 nemesis = {git = "https://github.com/xqhare/nemesis"}
 horae = {git = "https://github.com/xqhare/horae"}
+athena = {git = "https://github.com/xqhare/athena", features = ["bit_flags"]}
