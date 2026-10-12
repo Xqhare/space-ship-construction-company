@@ -1,0 +1,6 @@
+- [ ] Settings
+    - [ ] Bumpscosity :: As in Stanley Parable
+        * A singular bumpscosity is called a bumpscosit
+        * Should do something in contrast to the bumpscosity in Stanley Parable
+        * Possible values: 0-1000; 0 = Min / off; 1000 = Max; 1 = default
+        * Bumpscosity could be the rate of easter eggs in the game?

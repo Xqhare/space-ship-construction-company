@@ -20,7 +20,7 @@ dependencies = [
 [[package]]
 name = "horae"
 version = "1.4.0"
-source = "git+https://github.com/xqhare/horae#ed06a2630367b907542fcff90a8fd493521992b2"
+source = "git+https://github.com/xqhare/horae#eba4c718158aa47385f076780eb73fe327497055"
 dependencies = [
  "aequa",
 ]

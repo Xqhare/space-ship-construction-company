@@ -1,0 +1,122 @@
+use std::{collections::HashMap, path::Path, time::Duration};
+
+use aequa::{Object, XffValue, xff};
+use horae::Utc;
+
+use crate::{
+    error::SSCCResult,
+    modules::event::{Event, EventId, event_pool::EventPools},
+};
+
+#[non_exhaustive]
+pub struct EventStore {
+    /// Store of all events
+    store: HashMap<EventId, Event>,
+    /// Store of all events that have been triggered and thus are blocked from happening again
+    triggered_and_blocked: Vec<EventId>,
+    /// Store of all events that have been triggered and thus are blocked from happening again
+    /// for a specific duration
+    triggered_and_tmp_blocked: HashMap<EventId, TmpBlockedEvent>,
+    /// Store of all events that have ever been triggered. May contain duplicate `EventId`s
+    /// if an event is triggered multiple times.
+    ///
+    /// Format: `[(EventId, EventChoiceId, Utc)]`
+    /// Where `EventChoiceId` is the ID of the event choice that was picked and `Utc` is the
+    /// time that the event was triggered
+    triggered: Vec<(EventId, EventChoiceId, Utc)>,
+    event_pool: EventPools,
+}
+
+impl EventStore {
+    pub fn new<P: AsRef<Path>>(all_events_path: P) -> SSCCResult<EventStore> {
+        let store = load_events_fs(all_events_path)?;
+        Ok(EventStore {
+            store,
+            triggered_and_blocked: Vec::new(),
+            triggered_and_tmp_blocked: HashMap::new(),
+        })
+    }
+    pub fn save_store<P: AsRef<Path>>(&self, save_data_path: P) -> SSCCResult<()> {}
+    pub fn load_saved_store<P: AsRef<Path>>(
+        all_events_path: P,
+        save_data: &Object,
+    ) -> SSCCResult<EventStore> {
+        let store = load_events_fs(all_events_path)?;
+        let triggered_and_blocked = {
+            if let Some(val) = save_data.get("triggered_and_blocked")
+                && let Some(ary) = val.as_array()
+            {
+                let mut tmp = Vec::new();
+                for num in ary {
+                    if let Some(num) = num.as_number()
+                        && let Some(num) = num.into_usize()
+                    {
+                        tmp.push(num);
+                    }
+                }
+                tmp
+            }
+        };
+    }
+}
+
+fn load_events_fs<P: AsRef<Path>>(all_events_path: P) -> SSCCResult<HashMap<EventId, Event>> {
+    let mut out = HashMap::new();
+    // TODO: Load events from the file system
+    Ok(out)
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone)]
+pub struct TmpBlockedEvent {
+    event_id: EventId,
+    blocked_until: Utc,
+}
+
+impl TmpBlockedEvent {
+    pub fn new(event_id: EventId, now: Utc, block_duration: Duration) -> TmpBlockedEvent {
+        TmpBlockedEvent {
+            event_id,
+            blocked_until: now + block_duration,
+        }
+    }
+    pub fn is_blocked(&self, now: Utc) -> bool {
+        now < self.blocked_until
+    }
+    pub fn get_event_id(&self) -> EventId {
+        self.event_id
+    }
+    pub fn to_xff(&self) -> XffValue {
+        let mut obj = Object::new();
+        obj.insert("event_id", self.event_id);
+        obj.insert("blocked_until", self.blocked_until.to_xffvalue());
+        xff!(obj)
+    }
+    pub fn from_xff(value: &XffValue) -> Result<TmpBlockedEvent, ()> {
+        value.try_into()
+    }
+}
+
+impl TryInto<TmpBlockedEvent> for &XffValue {
+    type Error = ();
+    fn try_into(self) -> Result<TmpBlockedEvent, Self::Error> {
+        if let Some(obj) = self.as_object()
+            && let Some(event_id) = obj.get("event_id")
+            && let Some(blocked_until) = obj.get("blocked_until")
+        {
+            if let Some(event_id) = event_id.as_number()
+                && let Some(event_id) = event_id.into_usize()
+                && let Some(blocked_until) = Utc::from_xffvalue(blocked_until.clone())
+            {
+                Ok(TmpBlockedEvent {
+                    event_id: event_id as u32,
+                    blocked_until,
+                })
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        }
+    }
+}

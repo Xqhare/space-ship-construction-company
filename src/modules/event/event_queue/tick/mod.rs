@@ -36,6 +36,9 @@ impl Tick {
                     };
                     Utc::from_ymd_hms(year, month, 1, 0, 0, 0)
                 }
+                TickKind::BiMonth => next_multi_month(&now, 10, 2),
+                TickKind::QuarterYear => next_multi_month(&now, 9, 3),
+                TickKind::HalfYear => next_multi_month(&now, 6, 6),
                 _ => {
                     let year = match kind {
                         TickKind::Year => 1,
@@ -43,6 +46,11 @@ impl Tick {
                         TickKind::Triennial => 3,
                         TickKind::Quintennial => 5,
                         TickKind::Decennial => 10,
+                        TickKind::Quadranscentennial => 25,
+                        TickKind::Semicentennial => 50,
+                        TickKind::Centennial => 100,
+                        TickKind::Sesquicentennial => 150,
+                        TickKind::Bicentennial => 200,
                         _ => panic!("Invalid tick kind"),
                     };
                     Utc::from_ymd_hms(now.date().year.saturating_add(year), 1, 1, 0, 0, 0)
@@ -51,6 +59,19 @@ impl Tick {
         };
         Tick { time, kind }
     }
+}
+
+fn next_multi_month(now: &Utc, month: u8, next_month: u8) -> Utc {
+    let now_date = now.date();
+    let (year, month) = if now_date.month > month {
+        (
+            now_date.year.saturating_add(1),
+            now_date.month.saturating_sub(month),
+        )
+    } else {
+        (now_date.year, now_date.month.saturating_add(next_month))
+    };
+    Utc::from_ymd_hms(year, month, 1, 0, 0, 0)
 }
 
 impl TryFrom<&XffValue> for Tick {
@@ -77,21 +98,43 @@ impl TryFrom<&XffValue> for Tick {
     }
 }
 
-// NOTE: Limited by `EventQueue`'s bit-flag to 16 at most
-pub const TICK_KIND_AMOUNT: u16 = 9;
+// NOTE: `TickKind` is limited by `EventQueue`'s bit-flag to 16 entries at most
+pub const TICK_KIND_AMOUNT: u16 = 16;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum TickKind {
     Day = 0,
     Week = 1,
     Fortnight = 2,
     Month = 3,
-    Year = 4,
-    Biennial = 5,
-    Triennial = 6,
-    Quintennial = 7,
-    Decennial = 8,
+    BiMonth = 4,
+    QuarterYear = 5,
+    HalfYear = 6,
+    Year = 7,
+    /// Every 2 years
+    Biennial = 8,
+    /// Every 3 years
+    Triennial = 9,
+    /// Every 5 years
+    Quintennial = 10,
+    /// Every 10 years
+    Decennial = 11,
+    // NOTE: From here on, I expect at most one tick of these kinds to happen in a long to very
+    // long game. They are likely to trigger special events for players that have played a save for
+    // a very long time
+    /// Every 25 years
+    Quadranscentennial = 12,
+    /// Every 50 years
+    Semicentennial = 13,
+    /// Every 100 years
+    Centennial = 14,
+    // NOTE: I expect these last two kinds to almost never trigger in a save. They should be
+    // special though for the most dedicated players
+    /// Every 150 years
+    Sesquicentennial = 15,
+    /// Every 200 years
+    Bicentennial = 16,
 }
 
 impl From<u16> for TickKind {
@@ -101,11 +144,19 @@ impl From<u16> for TickKind {
             1 => TickKind::Week,
             2 => TickKind::Fortnight,
             3 => TickKind::Month,
-            4 => TickKind::Year,
-            5 => TickKind::Biennial,
-            6 => TickKind::Triennial,
-            7 => TickKind::Quintennial,
-            8 => TickKind::Decennial,
+            4 => TickKind::BiMonth,
+            5 => TickKind::QuarterYear,
+            6 => TickKind::HalfYear,
+            7 => TickKind::Year,
+            8 => TickKind::Biennial,
+            9 => TickKind::Triennial,
+            10 => TickKind::Quintennial,
+            11 => TickKind::Decennial,
+            12 => TickKind::Quadranscentennial,
+            13 => TickKind::Semicentennial,
+            14 => TickKind::Centennial,
+            15 => TickKind::Sesquicentennial,
+            16 => TickKind::Bicentennial,
             _ => panic!("Invalid tick kind"),
         }
     }

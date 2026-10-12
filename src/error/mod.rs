@@ -10,7 +10,16 @@ pub enum SSCCError {
     ComponentBuilder(String),
     CapabilityBuilder(String),
     ShipClassBuilder(String),
+    Startup(String),
     Io(std::io::Error),
+}
+
+pub fn new_generic_error(msg: &str) -> NemesisError {
+    SSCCError::Generic(msg.to_string()).into()
+}
+
+pub fn new_startup_error(msg: &str) -> NemesisError {
+    SSCCError::Startup(msg.to_string()).into()
 }
 
 pub fn new_component_builder_error() -> NemesisError {
@@ -45,10 +54,13 @@ impl std::error::Error for SSCCError {
             SSCCError::ComponentBuilder(msg) => msg,
             SSCCError::CapabilityBuilder(msg) => msg,
             SSCCError::ShipClassBuilder(msg) => msg,
+            SSCCError::Startup(msg) => msg,
             SSCCError::Io(_) => "IO Error",
         }
     }
 }
+
+const ERROR_TITLE: &str = "Space Ship Construction Company Error";
 
 impl From<SSCCError> for NemesisError {
     fn from(err: SSCCError) -> Self {
@@ -57,21 +69,14 @@ impl From<SSCCError> for NemesisError {
             SSCCError::ComponentBuilder(ref msg) => (msg.clone(), "ComponentBuilder"),
             SSCCError::CapabilityBuilder(ref msg) => (msg.clone(), "CapabilityBuilder"),
             SSCCError::ShipClassBuilder(ref msg) => (msg.clone(), "ShipClassBuilder"),
+            SSCCError::Startup(ref msg) => (msg.clone(), "Startup"),
             SSCCError::Io(ref err) => (err.to_string(), "std::io::Error"),
         };
-        // NOTE: This is a bit of a hack, but it works
-        // While leaking memory on every error creation is bad, I am expecting to not create a
-        // large amount of errors.
-        // Further, if all text remains ASCII, each leaked string will take around 40-50 bytes.
-        //
-        // Of course this will mean that the longer the program runs, the more memory will
-        // be consumed, relative to the amount of errors raised.
-        //
-        // For general release unacceptable, for now its fine
-        let tmp_box = Box::new(format!("SSCC Error raised in: '{}'", source));
-        let leaked_static_ptr: &'static str = Box::leak(tmp_box);
+        let tmp_box = format!("SSCC Error raised in: '{}'", source);
 
-        NemesisError::new(leaked_static_ptr, err).add_ctx(ctx)
+        NemesisError::new(ERROR_TITLE, err)
+            .add_ctx(tmp_box)
+            .add_ctx(ctx)
     }
 }
 
@@ -82,6 +87,7 @@ impl fmt::Display for SSCCError {
             SSCCError::ComponentBuilder(msg) => write!(f, "{}", msg),
             SSCCError::CapabilityBuilder(msg) => write!(f, "{}", msg),
             SSCCError::ShipClassBuilder(msg) => write!(f, "{}", msg),
+            SSCCError::Startup(msg) => write!(f, "{}", msg),
             SSCCError::Io(err) => write!(f, "{}", err),
         }
     }
