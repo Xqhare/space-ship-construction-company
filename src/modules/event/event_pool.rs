@@ -12,6 +12,20 @@ pub struct EventPools {
     ship_class_pools: EventPool,
 }
 
+impl EventPools {
+    pub fn new() -> EventPools {
+        EventPools {
+            background_pools: EventPool::new(),
+            story_pools: EventPool::new(),
+            special_pools: EventPool::new(),
+            people_pools: EventPool::new(),
+            production_pools: EventPool::new(),
+            science_pools: EventPool::new(),
+            ship_class_pools: EventPool::new(),
+        }
+    }
+}
+
 pub struct EventPool {
     /// All events part of the pool
     pool: Vec<EventId>,

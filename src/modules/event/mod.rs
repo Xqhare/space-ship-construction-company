@@ -1,5 +1,8 @@
+use aequa::XffValue;
 use athena::float::HpFloat;
 use horae::Utc;
+
+use crate::modules::modifiers::Modifier;
 
 pub mod event_pool;
 pub mod event_queue;
@@ -15,8 +18,17 @@ pub struct Event {
     pub is_triggered_only: bool,
     pub is_player_only: bool,
     pub triggers: Vec<EventTrigger>,
-    pub immediate_effects: Vec<EffectId>,
+    pub immediate_effects: Vec<Modifier>,
     pub actions: Vec<EventChoice>,
+}
+
+impl Event {
+    pub fn to_xff(&self) -> XffValue {
+        todo!()
+    }
+    pub fn from_xff(value: &XffValue) -> Result<Event, ()> {
+        todo!()
+    }
 }
 
 pub struct EventChoice {
@@ -26,11 +38,7 @@ pub struct EventChoice {
     pub rewards: Vec<ChoiceReward>,
 }
 
-pub enum ChoiceReward {
-    Money(HpFloat),
-    Modifier(Modifier),
-    Event(EventId, Option<EventChoiceId>),
-}
+pub enum ChoiceReward {}
 
 pub enum EventTrigger {
     Date(EventOp, Utc),

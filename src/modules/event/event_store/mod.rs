@@ -1,11 +1,11 @@
 use std::{collections::HashMap, path::Path, time::Duration};
 
-use aequa::{Object, XffValue, xff};
+use aequa::{Array, Object, XffValue, xff};
 use horae::Utc;
 
 use crate::{
     error::SSCCResult,
-    modules::event::{Event, EventId, event_pool::EventPools},
+    modules::event::{Event, EventChoiceId, EventId, event_pool::EventPools},
 };
 
 #[non_exhaustive]
@@ -34,29 +34,55 @@ impl EventStore {
             store,
             triggered_and_blocked: Vec::new(),
             triggered_and_tmp_blocked: HashMap::new(),
+            triggered: Vec::new(),
+            event_pool: EventPools::new(),
         })
     }
-    pub fn save_store<P: AsRef<Path>>(&self, save_data_path: P) -> SSCCResult<()> {}
-    pub fn load_saved_store<P: AsRef<Path>>(
-        all_events_path: P,
-        save_data: &Object,
-    ) -> SSCCResult<EventStore> {
-        let store = load_events_fs(all_events_path)?;
-        let triggered_and_blocked = {
-            if let Some(val) = save_data.get("triggered_and_blocked")
-                && let Some(ary) = val.as_array()
-            {
-                let mut tmp = Vec::new();
-                for num in ary {
-                    if let Some(num) = num.as_number()
-                        && let Some(num) = num.into_usize()
-                    {
-                        tmp.push(num);
-                    }
-                }
-                tmp
+    pub fn from_xff(xff: &XffValue) -> SSCCResult<EventStore> {
+        todo!()
+    }
+    pub fn to_xff(&self) -> XffValue {
+        let mut obj = Object::new();
+        let store = {
+            let mut store = Object::new();
+            for (event_id, event) in self.store.iter() {
+                store.insert(&event_id.to_string(), event.to_xff());
             }
+            store
         };
+        let triggered_and_blocked = {
+            let mut store = Array::new();
+            for event_id in self.triggered_and_blocked.iter() {
+                store.push(*event_id);
+            }
+            store
+        };
+        let triggered_and_tmp_blocked = {
+            let mut store = Array::new();
+            for (event_id, tmp_blocked_event) in self.triggered_and_tmp_blocked.iter() {
+                let mut inner_obj = Object::new();
+                inner_obj.insert("event_id", *event_id);
+                inner_obj.insert("tmp_blocked_event", tmp_blocked_event.to_xff());
+                store.push(xff!(inner_obj));
+            }
+            store
+        };
+        let triggered = {
+            let mut store = Array::new();
+            for (event_id, event_choice_id, utc) in self.triggered.iter() {
+                let mut obj = Object::new();
+                obj.insert("event_id", *event_id);
+                obj.insert("event_choice_id", *event_choice_id);
+                obj.insert("utc", utc.to_xffvalue());
+                store.push(xff!(obj));
+            }
+            store
+        };
+        obj.insert("store", store);
+        obj.insert("triggered_and_blocked", triggered_and_blocked);
+        obj.insert("triggered_and_tmp_blocked", triggered_and_tmp_blocked);
+        obj.insert("triggered", triggered);
+        xff!(obj)
     }
 }
 
