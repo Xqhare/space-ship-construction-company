@@ -10,7 +10,7 @@ source = "git+https://github.com/xqhare/aequa#0dc7ec0dd66e9981e0ad0a9fba49d38e07
 [[package]]
 name = "athena"
 version = "2.1.0"
-source = "git+https://github.com/xqhare/athena#2f62f13da4416273ad269a6e3fbc3aebb3a917a0"
+source = "git+https://github.com/xqhare/athena#d7a577fdfa934208f49a6c42ea5582fe6b9a3377"
 dependencies = [
  "aequa",
  "libc",
@@ -20,7 +20,7 @@ dependencies = [
 [[package]]
 name = "fortuna"
 version = "2.1.0"
-source = "git+https://github.com/xqhare/fortuna#2e482992c6c296a31a67cfdd31aed4e7cbb861a6"
+source = "git+https://github.com/xqhare/fortuna#3ba92b3eb7476e8dbc482d0b654b7a3b3846a6f5"
 dependencies = [
  "athena",
 ]
@@ -36,10 +36,10 @@ dependencies = [
 [[package]]
 name = "ilmarinen"
 version = "1.2.0"
-source = "git+https://github.com/xqhare/ilmarinen#f3748121b2698fec5269c261ed1749c1368f4637"
 dependencies = [
  "fortuna",
  "mawu",
+ "nemesis",
  "thoth",
  "tyche",
 ]
@@ -53,7 +53,7 @@ checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 [[package]]
 name = "mawu"
 version = "2.0.0"
-source = "git+https://github.com/Xqhare/mawu#5922005ed7f789f45f4b2a67866fbb21b0742697"
+source = "git+https://github.com/Xqhare/mawu#41f2cb052db8c30e82effeeb8edc7f415531ab23"
 dependencies = [
  "athena",
  "horae",
@@ -64,7 +64,7 @@ dependencies = [
 [[package]]
 name = "nemesis"
 version = "1.0.0"
-source = "git+https://github.com/xqhare/nemesis#b9270897bdac1b3377c6f57edaa9d7e4fee60483"
+source = "git+https://github.com/xqhare/nemesis#8bb94ecc2355caa7427f73424963f0ed9bb3147a"
 
 [[package]]
 name = "space-ship-construction-company"

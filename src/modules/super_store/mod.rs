@@ -1,16 +1,15 @@
 use std::{path::Path, rc::Rc};
 
 use aequa::{Array, Object, XffValue, xff};
-use fortuna::{Fortuna, RngApi};
+use fortuna::Fortuna;
 use ilmarinen::WordSmith;
 use nemesis::NemesisResultExt;
 use thoth::Thoth;
-use tyche::Tyche;
 
 use crate::{
     error::{SSCCError, SSCCResult, new_startup_error},
     modules::super_store::data_store::DataStore,
-    utils::seed_giver,
+    utils::{seed_giver, seed_normaliser},
 };
 
 pub mod data_store;
@@ -23,6 +22,7 @@ pub struct SuperStore {
     rng: Fortuna,
     word_smith: WordSmith,
     world_seed: Vec<u8>,
+    world_seed_normalised: Vec<u8>,
 }
 
 impl SuperStore {
@@ -36,14 +36,15 @@ impl SuperStore {
         seed: V,
         word_smith_path: P,
     ) -> SSCCResult<SuperStore> {
-        let seed = seed.into();
+        let world_seed = seed.into();
+        let world_seed_normalised = seed_normaliser(world_seed.clone());
         let player_store = DataStore::new();
         let world_store = DataStore::new();
         let unicode =
             Rc::new(Thoth::new().add_ctx("Startup error during Unicode (Thoth) initialization")?);
-        let rng = Fortuna::new(seed.clone());
+        let rng = Fortuna::new(world_seed_normalised.clone());
         let word_smith = WordSmith::new_managed(word_smith_path.as_ref(), unicode.clone())
-            .map_err(|e| SSCCError::Io(e))
+            .map_err(|err| err.to_nemesis_error())
             .add_ctx("Startup error during word smith (Ilmarinen) initialization")?;
         Ok(SuperStore {
             player_store,
@@ -51,7 +52,8 @@ impl SuperStore {
             unicode,
             rng,
             word_smith,
-            world_seed: seed,
+            world_seed,
+            world_seed_normalised,
         })
     }
     pub fn to_xff(&self) -> XffValue {
@@ -67,6 +69,14 @@ impl SuperStore {
             ary
         };
         obj.insert("world_seed", seed);
+        let seed_normal = {
+            let mut ary = Array::new();
+            for s in self.world_seed_normalised.iter() {
+                ary.push(*s);
+            }
+            ary
+        };
+        obj.insert("world_seed_normalised", seed_normal);
         xff!(obj)
     }
     pub fn from_xff<P: AsRef<Path>>(xff: &XffValue, word_smith_path: P) -> SSCCResult<SuperStore> {
@@ -76,6 +86,8 @@ impl SuperStore {
             && let Some(rng) = obj.get("rng")
             && let Some(world_seed) = obj.get("world_seed")
             && let Some(world_seed) = world_seed.as_array()
+            && let Some(world_seed_normalised) = obj.get("world_seed_normalised")
+            && let Some(world_seed_normalised) = world_seed_normalised.as_array()
         {
             let player_store = DataStore::from_xff(player_store)
                 .add_ctx("Unable to load player store from XFF")?;
@@ -87,6 +99,21 @@ impl SuperStore {
             let world_seed = {
                 let mut out = Vec::with_capacity(world_seed.len());
                 for v in world_seed.iter() {
+                    if let Some(v) = v.as_number()
+                        && let Some(v) = v.into_usize()
+                    {
+                        out.push(v as u8);
+                    } else {
+                        return Err(new_startup_error(
+                            "Unable to load world seed from XFF. Not a number, usize, or valid u8.",
+                        ));
+                    }
+                }
+                out
+            };
+            let world_seed_normalised = {
+                let mut out = Vec::with_capacity(world_seed_normalised.len());
+                for v in world_seed_normalised.iter() {
                     if let Some(v) = v.as_number()
                         && let Some(v) = v.into_usize()
                     {
@@ -111,11 +138,12 @@ impl SuperStore {
                     Path::new(word_smith_path.as_ref()),
                     Rc::clone(&unicode),
                 )
-                .map_err(|e| SSCCError::Io(e))
+                .map_err(|err| err.to_nemesis_error())
                 .add_ctx(
                     "Unable to initalise word smith (Ilmarinen) during xff loading of SuperStore.",
                 )?,
                 world_seed,
+                world_seed_normalised,
             })
         } else {
             Err(new_startup_error("Unable to load SuperStore from XFF"))
