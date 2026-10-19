@@ -1,8 +1,13 @@
-use aequa::{Object, XffValue, hp_float::HpFloat, xff};
+use std::collections::HashMap;
 
-use crate::modules::{
-    component::Component,
-    modifiers::{Modifier, ModifierType},
+use aequa::{Array, Object, XffValue, hp_float::HpFloat, xff};
+
+use crate::{
+    error::{SSCCResult, new_startup_error},
+    modules::{
+        component::Component,
+        modifiers::{Modifier, ModifierType},
+    },
 };
 #[derive(Debug, Clone)]
 pub struct StatBox {
@@ -32,6 +37,82 @@ impl StatBox {
             unused_modifiers: Vec::new(),
             unused_flat_modifiers: Vec::new(),
         }
+    }
+    pub fn to_xff(&self) -> XffValue {
+        let mut obj = Object::new();
+        obj.insert("base_values", self.base_values.clone());
+        let modifiers: Array = self.modifiers.iter().map(|m| m.to_xff()).collect();
+        obj.insert("modifiers", modifiers);
+        let flat_modifiers: Array = self.flat_modifiers.iter().map(|m| m.to_xff()).collect();
+        obj.insert("flat_modifiers", flat_modifiers);
+        let unused_modifiers: Array = self.unused_modifiers.iter().map(|m| m.to_xff()).collect();
+        obj.insert("unused_modifiers", unused_modifiers);
+        let unused_flat_modifiers: Array = self
+            .unused_flat_modifiers
+            .iter()
+            .map(|m| m.to_xff())
+            .collect();
+        obj.insert("unused_flat_modifiers", unused_flat_modifiers);
+        xff!(obj)
+    }
+    pub fn from_xff(xff: &XffValue) -> SSCCResult<StatBox> {
+        if let Some(obj) = xff.as_object()
+            && let Some(base_values) = obj.get("base_values")
+            && let Some(base_values) = base_values.as_object()
+            && let Some(modifiers) = obj.get("modifiers")
+            && let Some(modifiers) = modifiers.as_array()
+            && let Some(flat_modifiers) = obj.get("flat_modifiers")
+            && let Some(flat_modifiers) = flat_modifiers.as_array()
+            && let Some(unused_modifiers) = obj.get("unused_modifiers")
+            && let Some(unused_modifiers) = unused_modifiers.as_array()
+            && let Some(unused_flat_modifiers) = obj.get("unused_flat_modifiers")
+            && let Some(unused_flat_modifiers) = unused_flat_modifiers.as_array()
+        {
+            let modifiers = {
+                let mut out = Vec::new();
+                for modifier in modifiers {
+                    out.push(Modifier::from_xff(&modifier)?);
+                }
+                out
+            };
+            let flat_modifiers = {
+                let mut out = Vec::new();
+                for modifier in flat_modifiers {
+                    out.push(Modifier::from_xff(&modifier)?);
+                }
+                out
+            };
+            let unused_modifiers = {
+                let mut out = Vec::new();
+                for modifier in unused_modifiers {
+                    out.push(Modifier::from_xff(&modifier)?);
+                }
+                out
+            };
+            let unused_flat_modifiers = {
+                let mut out = Vec::new();
+                for modifier in unused_flat_modifiers {
+                    out.push(Modifier::from_xff(&modifier)?);
+                }
+                out
+            };
+            Ok(StatBox {
+                base_values: base_values.clone(),
+                modifiers,
+                flat_modifiers,
+                unused_modifiers,
+                unused_flat_modifiers,
+            })
+        } else {
+            Err(new_startup_error(
+                "Can't convert value to StatBox, not an object or doesnt have expected keys.",
+            )
+            .add_ctx(format!("Value: {:?}", xff)))
+        }
+    }
+    /// Checks if the passed arg is tracked as a base value.
+    pub fn is_tracking<S: Into<String>>(&self, base_value_name: S) -> bool {
+        self.base_values.contains_key(&base_value_name.into())
     }
     pub fn has_base_values(&self) -> bool {
         !self.base_values.is_empty()

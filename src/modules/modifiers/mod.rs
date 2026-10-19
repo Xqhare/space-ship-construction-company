@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
 use aequa::{Object, XffValue, hp_float::HpFloat, xff};
+use nemesis::NemesisResultExt;
+
+use crate::error::{SSCCResult, new_startup_error};
 
 #[derive(Debug, Clone)]
 pub struct Modifier {
@@ -9,28 +12,29 @@ pub struct Modifier {
     pub value: HpFloat,
 }
 
-impl From<Object> for Modifier {
-    fn from(value: Object) -> Self {
-        let impacted_base_value_name = value
-            .get("impacted_base_value_name")
-            .unwrap()
-            .into_string()
-            .expect("Impacted base value name is not a string");
-        let kind = value
-            .get("kind")
-            .unwrap()
-            .into_string()
-            .expect("Modifier Kind is not a string")
-            .into();
-        let value = value
-            .get("value")
-            .unwrap()
-            .into_hp_float()
-            .expect("Modifier value is not a number");
-        Modifier {
-            impacted_base_value_name,
-            kind,
-            value,
+impl Modifier {
+    pub fn to_xff(&self) -> XffValue {
+        xff!(Into::<Object>::into(self.clone()))
+    }
+    pub fn from_xff(value: &XffValue) -> SSCCResult<Modifier> {
+        if let Some(obj) = value.as_object()
+            && let Some(ibvm) = obj.get("impacted_base_value_name")
+            && let Some(ibvm) = ibvm.into_string()
+            && let Some(k) = obj.get("kind")
+            && let Some(k) = k.into_string()
+            && let Some(v) = obj.get("value")
+            && let Some(v) = v.into_hp_float()
+        {
+            Ok(Modifier {
+                impacted_base_value_name: ibvm,
+                kind: k.into(),
+                value: v,
+            })
+        } else {
+            Err(new_startup_error(
+                "Can't convert value to Modifier, not an object.",
+            ))
+            .add_ctx(format!("Value: '{:?}'", value))
         }
     }
 }

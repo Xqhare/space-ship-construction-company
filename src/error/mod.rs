@@ -72,10 +72,10 @@ impl From<SSCCError> for NemesisError {
             SSCCError::Startup(ref msg) => (msg.clone(), "Startup"),
             SSCCError::Io(ref err) => (err.to_string(), "std::io::Error"),
         };
-        let tmp_box = format!("SSCC Error raised in: '{}'", source);
+        let source = format!("SSCC Error raised in: '{}'", source);
 
         NemesisError::new(ERROR_TITLE, err)
-            .add_ctx(tmp_box)
+            .add_ctx(source)
             .add_ctx(ctx)
     }
 }
