@@ -57,7 +57,7 @@ impl EventQueue {
     /// Use together with [`EventQueue::new_tick`]:
     /// ```
     /// use horae::Utc;
-    /// use space_ship_construction_company::modules::event_queue::EventQueue;
+    /// use space_ship_construction_company::modules::event::event_queue::EventQueue;
     /// let mut queue = EventQueue::new(Utc::now());
     /// while let Some(missing_tick) = queue.tick_kind_missing() {
     ///     queue.new_tick(Utc::now(), missing_tick);
