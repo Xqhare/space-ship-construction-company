@@ -8,8 +8,8 @@ aequa = { git = "https://github.com/xqhare/aequa" }
 athena = { git = "https://github.com/xqhare/athena", features = ["bit_flags"] }
 fortuna = { git = "https://github.com/xqhare/fortuna" }
 horae = { git = "https://github.com/xqhare/horae" }
-# ilmarinen = { git = "https://github.com/xqhare/ilmarinen" }
-ilmarinen = { path = "/home/xqhare/Adytum/Programming/rust/ilmarinen" }
+ilmarinen = { git = "https://github.com/xqhare/ilmarinen" }
+# ilmarinen = { path = "../ilmarinen" }
 nemesis = { git = "https://github.com/xqhare/nemesis" }
 thoth = { git = "https://github.com/xqhare/thoth" }
 tyche = { git = "https://github.com/xqhare/tyche" }

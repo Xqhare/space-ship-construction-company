@@ -5,7 +5,7 @@ use horae::Utc;
 
 use crate::{
     error::SSCCResult,
-    modules::event::{Event, EventChoiceId, EventId, event_pool::EventPools},
+    modules::event::{Event, EventChoiceId, EventId, event_id_pool::EventIdPools},
 };
 
 #[non_exhaustive]
@@ -24,18 +24,18 @@ pub struct EventStore {
     /// Where `EventChoiceId` is the ID of the event choice that was picked and `Utc` is the
     /// time that the event was triggered
     triggered: Vec<(EventId, EventChoiceId, Utc)>,
-    event_pool: EventPools,
+    event_pool: EventIdPools,
 }
 
 impl EventStore {
-    pub fn new<P: AsRef<Path>>(all_events_path: P) -> SSCCResult<EventStore> {
+    pub fn init_new<P: AsRef<Path>>(all_events_path: P) -> SSCCResult<EventStore> {
         let store = load_events_fs(all_events_path)?;
         Ok(EventStore {
             store,
             triggered_and_blocked: Vec::new(),
             triggered_and_tmp_blocked: HashMap::new(),
             triggered: Vec::new(),
-            event_pool: EventPools::new(),
+            event_pool: EventIdPools::new(),
         })
     }
     pub fn from_xff(xff: &XffValue) -> SSCCResult<EventStore> {

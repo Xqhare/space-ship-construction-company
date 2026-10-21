@@ -12,6 +12,11 @@ pub enum QueueItem {
     Event(QueueEvent),
     /// A tick (day, week, month, year, etc) for internal use
     Tick(Tick),
+    Modifier(QueueModifier),
+}
+
+pub struct QueueModifier {
+    pub time: Utc,
 }
 
 impl QueueItem {
@@ -20,6 +25,7 @@ impl QueueItem {
         match self {
             QueueItem::Event(e) => e.time,
             QueueItem::Tick(t) => t.time,
+            QueueItem::Modifier(m) => m.time,
         }
     }
     /// Convert the item to a `XffValue`

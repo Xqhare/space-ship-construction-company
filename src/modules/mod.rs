@@ -1,5 +1,6 @@
 pub mod capabilites;
 pub mod component;
+pub mod effect;
 pub mod event;
 pub mod flag_box;
 pub mod modifiers;

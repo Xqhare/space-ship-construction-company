@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, time::Duration};
 
 use aequa::{Object, XffValue, hp_float::HpFloat, xff};
 use nemesis::NemesisResultExt;
@@ -9,7 +9,55 @@ use crate::error::{SSCCResult, new_startup_error};
 pub struct Modifier {
     pub impacted_base_value_name: String,
     pub kind: ModifierType,
-    pub value: HpFloat,
+    pub duration: Option<Duration>,
+    pub op: ModifierOp,
+}
+
+#[derive(Debug, Clone)]
+pub enum ModifierOp {
+    Add(HpFloat),
+    Set(HpFloat),
+    Sub(HpFloat),
+    Mul(HpFloat),
+    Div(HpFloat),
+}
+
+impl ModifierOp {
+    pub fn to_xff(&self) -> XffValue {
+        let (op, value) = match self {
+            ModifierOp::Add(v) => ("add", v),
+            ModifierOp::Set(v) => ("set", v),
+            ModifierOp::Sub(v) => ("sub", v),
+            ModifierOp::Mul(v) => ("mul", v),
+            ModifierOp::Div(v) => ("div", v),
+        };
+        let mut obj = Object::new();
+        obj.insert("op", op);
+        obj.insert("value", XffValue::HpFloat(*value));
+        xff!(obj)
+    }
+    pub fn from_xff(xff: &XffValue) -> SSCCResult<ModifierOp> {
+        if let Some(obj) = xff.as_object()
+            && let Some(op) = obj.get("op")
+            && let Some(op) = op.into_string()
+            && let Some(v) = obj.get("value")
+            && let Some(v) = v.into_hp_float()
+        {
+            Ok(match op.as_str() {
+                "add" => ModifierOp::Add(v),
+                "set" => ModifierOp::Set(v),
+                "sub" => ModifierOp::Sub(v),
+                "mul" => ModifierOp::Mul(v),
+                "div" => ModifierOp::Div(v),
+                _ => return Err(new_startup_error("Unknown ModifierOp")),
+            })
+        } else {
+            Err(new_startup_error(
+                "Can't convert value to ModifierOp, not an object or doesn't have expected keys.",
+            ))
+            .add_ctx(format!("Value: '{:?}'", xff))
+        }
+    }
 }
 
 impl Modifier {
@@ -22,13 +70,28 @@ impl Modifier {
             && let Some(ibvm) = ibvm.into_string()
             && let Some(k) = obj.get("kind")
             && let Some(k) = k.into_string()
-            && let Some(v) = obj.get("value")
-            && let Some(v) = v.into_hp_float()
+            && let Some(op) = obj.get("op")
         {
+            let op = ModifierOp::from_xff(op)?;
+            let duration = {
+                if let Some(dur) = obj.get("duration") {
+                    if let Some(dur) = dur.into_std_duration() {
+                        Some(dur)
+                    } else {
+                        return Err(new_startup_error(
+                            "Duration key exists but can't convert duration to std::time::Duration",
+                        ))
+                        .add_ctx(format!("Duration: '{:?}'", dur));
+                    }
+                } else {
+                    None
+                }
+            };
             Ok(Modifier {
                 impacted_base_value_name: ibvm,
                 kind: k.into(),
-                value: v,
+                duration,
+                op,
             })
         } else {
             Err(new_startup_error(
@@ -41,14 +104,14 @@ impl Modifier {
 
 impl Into<Object> for Modifier {
     fn into(self) -> Object {
-        Object::from(vec![
-            (
-                "impacted_base_value_name",
-                xff!(self.impacted_base_value_name),
-            ),
-            ("kind", xff!(self.kind.to_string())),
-            ("value", xff!(self.value)),
-        ])
+        let mut obj = Object::new();
+        obj.insert("impacted_base_value_name", self.impacted_base_value_name);
+        obj.insert("kind", self.kind.to_string());
+        if let Some(dur) = self.duration {
+            obj.insert("duration", dur);
+        }
+        obj.insert("op", self.op.to_xff());
+        obj
     }
 }
 

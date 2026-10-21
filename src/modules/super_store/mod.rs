@@ -2,6 +2,7 @@ use std::{path::Path, rc::Rc};
 
 use aequa::{Array, Object, XffValue, xff};
 use fortuna::Fortuna;
+use horae::Utc;
 use ilmarinen::WordSmith;
 use nemesis::NemesisResultExt;
 use thoth::Thoth;
@@ -9,7 +10,7 @@ use thoth::Thoth;
 use crate::{
     error::{SSCCError, SSCCResult, new_startup_error},
     modules::super_store::data_store::DataStore,
-    utils::{seed_giver, seed_normaliser},
+    utils::{seed_giver, seed_normaliser, start_date},
 };
 
 pub mod data_store;
@@ -23,6 +24,7 @@ pub struct SuperStore {
     word_smith: WordSmith,
     world_seed: Vec<u8>,
     world_seed_normalised: Vec<u8>,
+    world_time: Utc,
 }
 
 impl SuperStore {
@@ -46,6 +48,7 @@ impl SuperStore {
         let word_smith = WordSmith::new_managed(word_smith_path.as_ref(), unicode.clone())
             .map_err(|err| err.to_nemesis_error())
             .add_ctx("Startup error during word smith (Ilmarinen) initialization")?;
+        let world_time = start_date();
         Ok(SuperStore {
             player_store,
             world_store,
@@ -54,6 +57,7 @@ impl SuperStore {
             word_smith,
             world_seed,
             world_seed_normalised,
+            world_time,
         })
     }
     pub fn to_xff(&self) -> XffValue {
@@ -77,6 +81,7 @@ impl SuperStore {
             ary
         };
         obj.insert("world_seed_normalised", seed_normal);
+        obj.insert("world_time", self.world_time.to_xffvalue());
         xff!(obj)
     }
     pub fn from_xff<P: AsRef<Path>>(xff: &XffValue, word_smith_path: P) -> SSCCResult<SuperStore> {
@@ -88,6 +93,8 @@ impl SuperStore {
             && let Some(world_seed) = world_seed.as_array()
             && let Some(world_seed_normalised) = obj.get("world_seed_normalised")
             && let Some(world_seed_normalised) = world_seed_normalised.as_array()
+            && let Some(world_time) = obj.get("world_time")
+            && let Some(world_time) = Utc::from_xffvalue(world_time.clone())
         {
             let player_store = DataStore::from_xff(player_store)
                 .add_ctx("Unable to load player store from XFF")?;
@@ -144,6 +151,7 @@ impl SuperStore {
                 )?,
                 world_seed,
                 world_seed_normalised,
+                world_time,
             })
         } else {
             Err(new_startup_error("Unable to load SuperStore from XFF"))
@@ -176,5 +184,13 @@ impl SuperStore {
     /// Gives read access to the world seed
     pub fn seed(&self) -> &Vec<u8> {
         &self.world_seed
+    }
+    /// Gives read access to the normalised world seed
+    pub fn seed_normalised(&self) -> &Vec<u8> {
+        &self.world_seed_normalised
+    }
+    /// Gives access to the world time
+    pub fn world_time(&mut self) -> &mut Utc {
+        &mut self.world_time
     }
 }

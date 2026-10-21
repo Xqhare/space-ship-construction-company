@@ -104,6 +104,8 @@ pub const TICK_KIND_AMOUNT: u16 = 16;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum TickKind {
+    // NOTE: Day through Year are the most common ticks
+    // They are the only ticks where the simulation should be triggered to run
     Day = 0,
     Week = 1,
     Fortnight = 2,
@@ -112,6 +114,8 @@ pub enum TickKind {
     QuarterYear = 5,
     HalfYear = 6,
     Year = 7,
+    // NOTE: From here on, I think of the ticks as special triggers for events mostly.
+    // Simulation-wise, they are not that important as they are always paired with a yearly tick (and day, month, bimonth, quarter year and half year)
     /// Every 2 years
     Biennial = 8,
     /// Every 3 years
@@ -120,21 +124,62 @@ pub enum TickKind {
     Quintennial = 10,
     /// Every 10 years
     Decennial = 11,
-    // NOTE: From here on, I expect at most one tick of these kinds to happen in a long to very
-    // long game. They are likely to trigger special events for players that have played a save for
-    // a very long time
     /// Every 25 years
     Quadranscentennial = 12,
+    // NOTE: From here on, I expect at most one or two ticks of these kinds to happen in a long to very long game.
+    // They are likely to trigger special events for dedicated players
     /// Every 50 years
     Semicentennial = 13,
     /// Every 100 years
     Centennial = 14,
-    // NOTE: I expect these last two kinds to almost never trigger in a save. They should be
-    // special though for the most dedicated players
+    // NOTE: I expect these last two kinds to almost never trigger in a save. They should be a reward for the most dedicated players
     /// Every 150 years
     Sesquicentennial = 15,
     /// Every 200 years
     Bicentennial = 16,
+}
+
+impl TickKind {
+    /// Returns true if the tick is a simulation tick
+    ///
+    /// # Note
+    /// Simulation ticks are the ticks that should trigger the simulation to run
+    ///
+    /// They may be day, week, fortnight, month, bimonth, quarter year or half year ticks
+    pub fn is_simulation_tick(&self) -> bool {
+        match self {
+            TickKind::Day
+            | TickKind::Week
+            | TickKind::Fortnight
+            | TickKind::Month
+            | TickKind::BiMonth
+            | TickKind::QuarterYear
+            | TickKind::HalfYear
+            | TickKind::Year => true,
+            _ => false,
+        }
+    }
+    /// Returns true if the tick is a special tick
+    ///
+    /// # Note
+    /// Special ticks are the ticks that should trigger special events
+    /// The Simulation should not run on these ticks
+    ///
+    /// They may be biennial, triennial, quintennial, decennial, quadranscentennial, semicentennial, centennial, sesquicentennial or bicentennial ticks
+    pub fn is_special_tick(&self) -> bool {
+        match self {
+            TickKind::Biennial
+            | TickKind::Triennial
+            | TickKind::Quintennial
+            | TickKind::Decennial
+            | TickKind::Quadranscentennial
+            | TickKind::Semicentennial
+            | TickKind::Centennial
+            | TickKind::Sesquicentennial
+            | TickKind::Bicentennial => true,
+            _ => false,
+        }
+    }
 }
 
 impl From<u16> for TickKind {
@@ -173,5 +218,16 @@ fn from_into_tick_kind() {
     for i in 0..TICK_KIND_AMOUNT {
         let tick_kind = TickKind::from(i);
         assert_eq!(Into::<u16>::into(tick_kind), i);
+    }
+}
+
+#[test]
+fn bullshit_tick_kind() {
+    for i in 0..TICK_KIND_AMOUNT {
+        let tick_kind = TickKind::from(i);
+        assert!(
+            !(tick_kind.is_simulation_tick() && tick_kind.is_special_tick()),
+            "Invalid tick kind. {i} is both a simulation and special tick"
+        );
     }
 }

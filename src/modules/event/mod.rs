@@ -4,12 +4,14 @@ use horae::Utc;
 
 use crate::modules::modifiers::Modifier;
 
-pub mod event_pool;
+pub mod event_id_pool;
 pub mod event_queue;
 pub mod event_store;
 
 pub type EventId = u32;
 pub type EventChoiceId = u8;
+pub type BaseValueName = String;
+pub type FlagName = String;
 
 pub struct Event {
     pub id: EventId,
@@ -42,7 +44,9 @@ pub enum ChoiceReward {}
 
 pub enum EventTrigger {
     Date(EventOp, Utc),
-    Money(EventOp, HpFloat),
+    PlayerStat(BaseValueName, EventOp, HpFloat),
+    PlayerFlag(FlagName, bool),
+    WorldStat(BaseValueName, EventOp, HpFloat),
     Event(EventId, Option<EventChoiceId>),
 }
 

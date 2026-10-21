@@ -1,9 +1,12 @@
+use std::time::Duration;
+
 use aequa::{Array, Object, XffValue, hp_float::HpFloat, xff};
 
 use crate::{
     error::{SSCCResult, new_startup_error},
     modules::{
         component::Component,
+        event::event_queue::queue_item::QueueModifier,
         modifiers::{Modifier, ModifierType},
     },
 };
@@ -252,21 +255,44 @@ impl StatBox {
             self.unused_flat_modifiers.remove(*index);
         }
     }
-    pub fn add_modifier(&mut self, modifier: Modifier) {
-        let (modifiers, unused_modifiers) = match modifier.kind {
+    /// Returns `Some` if the modifier has an end date, `None` otherwise.
+    ///
+    /// Returns `(duration, modifier_type, index, is_used)`
+    /// - `duration` is the duration of the modifier
+    /// - `modifier_type` is the type of the modifier (`Percentage` or `Flat`)
+    /// - `index` is the index of the modifier (in `modifiers` or `unused_modifiers` / `flat_modifiers` or `unused_flat_modifiers`)
+    /// - `is_used` is `true` if the modifier is in `modifiers` or `flat_modifiers`, `false` otherwise
+    pub fn add_modifier(
+        &mut self,
+        modifier: Modifier,
+    ) -> Option<(Duration, ModifierType, usize, bool)> {
+        let (mod_kind, mod_dur) = (modifier.kind, modifier.duration);
+        let (modifiers, unused_modifiers) = match mod_kind {
             ModifierType::Percentage => (&mut self.modifiers, &mut self.unused_modifiers),
             ModifierType::Flat => (&mut self.flat_modifiers, &mut self.unused_flat_modifiers),
         };
-        if self
+        let (idx, is_used) = if self
             .base_values
             .contains_key(&modifier.impacted_base_value_name)
         {
             modifiers.push(modifier);
+            (modifiers.len().saturating_sub(1), true)
         } else {
             unused_modifiers.push(modifier);
+            (unused_modifiers.len().saturating_sub(1), false)
+        };
+        if let Some(dur) = mod_dur {
+            Some((dur, mod_kind, idx, is_used))
+        } else {
+            None
         }
     }
-    pub fn add_component(&mut self, component: &Component) {
+    /// Returns a vector of `(duration, modifier_type, index, is_used)`
+    /// Each element is one of the modifiers of the component with a time to live
+    pub fn add_component(
+        &mut self,
+        component: &Component,
+    ) -> Option<Vec<Option<(Duration, ModifierType, usize, bool)>>> {
         let stat_box = component.get_stat_box();
         for (base_value_name, base_value_value) in stat_box.base_values.iter() {
             let base_value_value = base_value_value
@@ -282,19 +308,21 @@ impl StatBox {
                     .insert(base_value_name.clone(), *base_value_value);
             }
         }
+        let mut out = Vec::new();
         for modifier in stat_box.modifiers.iter() {
-            self.add_modifier(modifier.clone());
+            out.push(self.add_modifier(modifier.clone()));
         }
         for modifier in stat_box.flat_modifiers.iter() {
-            self.add_modifier(modifier.clone());
+            out.push(self.add_modifier(modifier.clone()));
         }
         for unused_modifier in stat_box.unused_modifiers.iter() {
-            self.add_modifier(unused_modifier.clone());
+            out.push(self.add_modifier(unused_modifier.clone()));
         }
         for unused_flat_modifier in stat_box.unused_flat_modifiers.iter() {
-            self.add_modifier(unused_flat_modifier.clone());
+            out.push(self.add_modifier(unused_flat_modifier.clone()));
         }
         self.update_unused_modifiers();
+        if out.is_empty() { None } else { Some(out) }
     }
 }
 

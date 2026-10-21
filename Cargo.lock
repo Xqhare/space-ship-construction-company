@@ -4,13 +4,16 @@ version = 4
 
 [[package]]
 name = "aequa"
-version = "1.2.2"
-source = "git+https://github.com/xqhare/aequa#0dc7ec0dd66e9981e0ad0a9fba49d38e0785ff79"
+version = "1.3.1"
+source = "git+https://github.com/xqhare/aequa#e8a5bd70dfd064390ec47f625520aa11d4809468"
+dependencies = [
+ "nemesis",
+]
 
 [[package]]
 name = "athena"
-version = "2.1.0"
-source = "git+https://github.com/xqhare/athena#d7a577fdfa934208f49a6c42ea5582fe6b9a3377"
+version = "2.2.0"
+source = "git+https://github.com/xqhare/athena#64813a0d36afffe58eb01144c99a4f88ff0be102"
 dependencies = [
  "aequa",
  "libc",
@@ -19,8 +22,8 @@ dependencies = [
 
 [[package]]
 name = "fortuna"
-version = "2.1.0"
-source = "git+https://github.com/xqhare/fortuna#3ba92b3eb7476e8dbc482d0b654b7a3b3846a6f5"
+version = "2.2.0"
+source = "git+https://github.com/xqhare/fortuna#1f139faa541cb8a5e79c6a86a194af638f2fd120"
 dependencies = [
  "athena",
 ]
@@ -36,6 +39,7 @@ dependencies = [
 [[package]]
 name = "ilmarinen"
 version = "1.2.0"
+source = "git+https://github.com/xqhare/ilmarinen#04c7b0241cff08ad6f63666cd8e47ad05032fccd"
 dependencies = [
  "fortuna",
  "mawu",
@@ -91,7 +95,7 @@ dependencies = [
 [[package]]
 name = "tyche"
 version = "1.3.0"
-source = "git+https://github.com/xqhare/tyche#453ab39eef72a0bfdd5db1a1690b5b5993bbdaf0"
+source = "git+https://github.com/xqhare/tyche#90576dc249b3e0c4ff497d59acbe660646db5f9a"
 dependencies = [
  "athena",
 ]
