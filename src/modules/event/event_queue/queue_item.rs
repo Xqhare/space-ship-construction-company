@@ -17,6 +17,7 @@ pub enum QueueItem {
 
 pub struct QueueModifier {
     pub time: Utc,
+    pub stat_box_location: StatBoxLocation,
 }
 
 impl QueueItem {

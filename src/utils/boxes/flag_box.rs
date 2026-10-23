@@ -1,27 +1,32 @@
 use std::collections::HashSet;
 
-use aequa::{Array, XffValue, xff};
+use aequa::{Array, XffSerde, XffValue, xff};
 
-use crate::error::{SSCCResult, new_startup_error};
+use crate::error::new_startup_error;
+
+pub type Flag = String;
 
 /// A collection of flags
 ///
 /// If a flag exists, it is considered to be `true`.
 #[non_exhaustive]
 pub struct FlagBox {
-    flags: HashSet<String>,
+    flags: HashSet<Flag>,
 }
 
-impl FlagBox {
-    pub fn to_xff(&self) -> XffValue {
+impl XffSerde for FlagBox {
+    fn to_xff(&self) -> XffValue {
         let mut ary = Array::new();
         for flag in &self.flags {
             ary.push(xff!(flag));
         }
         xff!(ary)
     }
-    pub fn from_xff(value: &XffValue) -> SSCCResult<FlagBox> {
-        if let Some(ary) = value.as_array() {
+    fn from_xff(xff: &XffValue) -> Result<Self, nemesis::NemesisError>
+    where
+        Self: Sized,
+    {
+        if let Some(ary) = xff.as_array() {
             let mut flags = HashSet::new();
             for flag in ary {
                 if let Some(flag) = flag.into_string() {
@@ -31,17 +36,20 @@ impl FlagBox {
                         "Can't convert value to a flag in FlagBox, value not a string.",
                     )
                     .add_ctx(format!("Flag value: {:?}", flag))
-                    .add_ctx(format!("Parent value: {:?}", value)));
+                    .add_ctx(format!("Parent value: {:?}", xff)));
                 }
             }
             Ok(FlagBox { flags })
         } else {
             Err(
                 new_startup_error("Can't convert value to FlagBox, not an array.")
-                    .add_ctx(format!("Value: {:?}", value)),
+                    .add_ctx(format!("Value: {:?}", xff)),
             )
         }
     }
+}
+
+impl FlagBox {
     /// Create a new, completely empty, FlagBox
     pub fn new() -> FlagBox {
         FlagBox {

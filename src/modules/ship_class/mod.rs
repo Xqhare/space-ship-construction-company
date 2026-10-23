@@ -1,6 +1,7 @@
 use crate::{
     error::{SSCCResult, new_ship_class_builder_error},
-    modules::{capabilites::Capability, component::Component, stat_box::StatBox},
+    modules::{capabilites::Capability, component::Component},
+    utils::boxes::stat_box::StatBox,
 };
 
 #[non_exhaustive]

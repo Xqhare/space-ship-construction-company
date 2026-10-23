@@ -1,7 +1,7 @@
 use std::{path::Path, rc::Rc};
 
 use aequa::{Array, Object, XffValue, xff};
-use fortuna::Fortuna;
+use fortuna::{Fortuna, helpers::ascii_seed_normaliser};
 use horae::Utc;
 use ilmarinen::WordSmith;
 use nemesis::NemesisResultExt;
@@ -9,16 +9,13 @@ use thoth::Thoth;
 
 use crate::{
     error::{SSCCError, SSCCResult, new_startup_error},
-    modules::super_store::data_store::DataStore,
-    utils::{seed_giver, seed_normaliser, start_date},
+    runtime::DataBoxSlotId,
+    utils::{boxes::data_box::DataBox, seed_giver, start_date},
 };
-
-pub mod data_store;
-
 #[non_exhaustive]
-pub struct SuperStore {
-    player_store: DataStore,
-    world_store: DataStore,
+pub struct SuperBox {
+    player_store: DataBoxSlotId,
+    world_store: DataBoxSlotId,
     unicode: Rc<Thoth>,
     rng: Fortuna,
     word_smith: WordSmith,
@@ -27,21 +24,19 @@ pub struct SuperStore {
     world_time: Utc,
 }
 
-impl SuperStore {
-    pub fn new<P: AsRef<Path>>(word_smith_path: P) -> SSCCResult<SuperStore> {
-        Self::new_seeded(
-            seed_giver()?.iter().map(|c| *c as u8).collect::<Vec<u8>>(),
-            word_smith_path,
-        )
+impl SuperBox {
+    pub fn new<P: AsRef<Path>>(word_smith_path: P) -> SSCCResult<SuperBox> {
+        Self::new_seeded(seed_giver()?, word_smith_path)
     }
-    pub fn new_seeded<V: Into<Vec<u8>>, P: AsRef<Path>>(
+    pub fn new_seeded<V: Into<Vec<char>>, P: AsRef<Path>>(
         seed: V,
         word_smith_path: P,
-    ) -> SSCCResult<SuperStore> {
-        let world_seed = seed.into();
-        let world_seed_normalised = seed_normaliser(world_seed.clone());
-        let player_store = DataStore::new();
-        let world_store = DataStore::new();
+    ) -> SSCCResult<SuperBox> {
+        let seed = seed.into();
+        let world_seed_normalised = ascii_seed_normaliser(seed.clone());
+        let world_seed = seed.iter().map(|c| *c as u8).collect::<Vec<u8>>();
+        let player_store = DataBox::new();
+        let world_store = DataBox::new();
         let unicode =
             Rc::new(Thoth::new().add_ctx("Startup error during Unicode (Thoth) initialization")?);
         let rng = Fortuna::new(world_seed_normalised.clone());
@@ -49,7 +44,7 @@ impl SuperStore {
             .map_err(|err| err.to_nemesis_error())
             .add_ctx("Startup error during word smith (Ilmarinen) initialization")?;
         let world_time = start_date();
-        Ok(SuperStore {
+        Ok(SuperBox {
             player_store,
             world_store,
             unicode,
@@ -84,7 +79,7 @@ impl SuperStore {
         obj.insert("world_time", self.world_time.to_xffvalue());
         xff!(obj)
     }
-    pub fn from_xff<P: AsRef<Path>>(xff: &XffValue, word_smith_path: P) -> SSCCResult<SuperStore> {
+    pub fn from_xff<P: AsRef<Path>>(xff: &XffValue, word_smith_path: P) -> SSCCResult<SuperBox> {
         if let Some(obj) = xff.as_object()
             && let Some(player_store) = obj.get("player_store")
             && let Some(world_store) = obj.get("world_store")
@@ -96,10 +91,10 @@ impl SuperStore {
             && let Some(world_time) = obj.get("world_time")
             && let Some(world_time) = Utc::from_xffvalue(world_time.clone())
         {
-            let player_store = DataStore::from_xff(player_store)
-                .add_ctx("Unable to load player store from XFF")?;
+            let player_store =
+                DataBox::from_xff(player_store).add_ctx("Unable to load player store from XFF")?;
             let world_store =
-                DataStore::from_xff(world_store).add_ctx("Unable to load world store from XFF")?;
+                DataBox::from_xff(world_store).add_ctx("Unable to load world store from XFF")?;
             let rng = Fortuna::from_xff(rng)
                 .map_err(|e| SSCCError::Startup(format!("{:?}", e)))
                 .add_ctx("Unable to load RNG from XFF")?;
@@ -136,7 +131,7 @@ impl SuperStore {
             let unicode = Rc::new(Thoth::new().add_ctx(
                 "Unable to initalise Unicode (Thoth) during xff loading of SuperStore.",
             )?);
-            Ok(SuperStore {
+            Ok(SuperBox {
                 player_store,
                 world_store,
                 unicode: Rc::clone(&unicode),
@@ -158,11 +153,11 @@ impl SuperStore {
         }
     }
     /// Gives access to the player store
-    pub fn player_store(&mut self) -> &mut DataStore {
+    pub fn player_store(&mut self) -> &mut DataBox {
         &mut self.player_store
     }
     /// Gives access to the world store
-    pub fn world_store(&mut self) -> &mut DataStore {
+    pub fn world_store(&mut self) -> &mut DataBox {
         &mut self.world_store
     }
     /// Gives access to the Unicode segmentation handler.

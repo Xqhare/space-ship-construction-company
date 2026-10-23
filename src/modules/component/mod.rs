@@ -1,10 +1,12 @@
 use aequa::{Object, XffValue};
 
-use crate::modules::{
-    capabilites::{Capability, CapabilityKind},
-    component::builder::ComponentBuilder,
-    modifiers::Modifier,
-    stat_box::StatBox,
+use crate::{
+    modules::{
+        capabilites::{Capability, CapabilityKind},
+        component::builder::ComponentBuilder,
+        modifiers::Modifier,
+    },
+    utils::boxes::stat_box::StatBox,
 };
 
 mod builder;

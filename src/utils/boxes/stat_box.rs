@@ -1,15 +1,20 @@
 use std::time::Duration;
 
-use aequa::{Array, Object, XffValue, hp_float::HpFloat, xff};
+use aequa::{Array, Object, XffSerde, XffValue, hp_float::HpFloat, xff};
 
 use crate::{
     error::{SSCCResult, new_startup_error},
     modules::{
         component::Component,
-        event::event_queue::queue_item::QueueModifier,
         modifiers::{Modifier, ModifierType},
     },
 };
+
+pub enum StatBoxLocation {
+    PlayerStore,
+    WorldStore,
+}
+
 #[derive(Debug, Clone)]
 pub struct StatBox {
     /// Base values (no modifiers)

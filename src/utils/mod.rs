@@ -4,6 +4,7 @@ use nemesis::NemesisResultExt;
 use tyche::{RngApi, Tyche};
 
 use crate::error::{SSCCResult, new_startup_error};
+pub mod boxes;
 
 pub fn start_date() -> Utc {
     Utc::from_ymd_hms(2500, 1, 1, 0, 0, 0)

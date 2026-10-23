@@ -1,15 +1,19 @@
 use std::{fmt::Display, time::Duration};
 
-use aequa::{Object, XffValue, hp_float::HpFloat, xff};
-use nemesis::NemesisResultExt;
+use aequa::{Object, XffSerde, XffValue, hp_float::HpFloat, xff};
+use nemesis::{NemesisError, NemesisResultExt};
 
-use crate::error::{SSCCResult, new_startup_error};
+use crate::{
+    error::{SSCCResult, new_startup_error},
+    utils::boxes::flag_box::Flag,
+};
 
 #[derive(Debug, Clone)]
 pub struct Modifier {
     pub impacted_base_value_name: String,
     pub kind: ModifierType,
     pub duration: Option<Duration>,
+    pub requires_flag: Option<Flag>,
     pub op: ModifierOp,
 }
 
@@ -22,8 +26,8 @@ pub enum ModifierOp {
     Div(HpFloat),
 }
 
-impl ModifierOp {
-    pub fn to_xff(&self) -> XffValue {
+impl XffSerde for ModifierOp {
+    fn to_xff(&self) -> XffValue {
         let (op, value) = match self {
             ModifierOp::Add(v) => ("add", v),
             ModifierOp::Set(v) => ("set", v),
@@ -36,7 +40,7 @@ impl ModifierOp {
         obj.insert("value", XffValue::HpFloat(*value));
         xff!(obj)
     }
-    pub fn from_xff(xff: &XffValue) -> SSCCResult<ModifierOp> {
+    fn from_xff(xff: &XffValue) -> Result<ModifierOp, NemesisError> {
         if let Some(obj) = xff.as_object()
             && let Some(op) = obj.get("op")
             && let Some(op) = op.into_string()
@@ -60,11 +64,11 @@ impl ModifierOp {
     }
 }
 
-impl Modifier {
-    pub fn to_xff(&self) -> XffValue {
+impl XffSerde for Modifier {
+    fn to_xff(&self) -> XffValue {
         xff!(Into::<Object>::into(self.clone()))
     }
-    pub fn from_xff(value: &XffValue) -> SSCCResult<Modifier> {
+    fn from_xff(value: &XffValue) -> SSCCResult<Modifier> {
         if let Some(obj) = value.as_object()
             && let Some(ibvm) = obj.get("impacted_base_value_name")
             && let Some(ibvm) = ibvm.into_string()

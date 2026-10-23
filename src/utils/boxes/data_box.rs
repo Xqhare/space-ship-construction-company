@@ -1,20 +1,20 @@
-use aequa::{Object, XffValue, xff};
+use aequa::{Object, XffSerde, XffValue, xff};
 
 use crate::{
     error::{SSCCResult, new_startup_error},
-    modules::{flag_box::FlagBox, stat_box::StatBox},
+    utils::boxes::{flag_box::FlagBox, stat_box::StatBox},
 };
 
-/// Generalised storage for player or world data
-pub struct DataStore {
+/// Generalised storage of data for entities
+pub struct DataBox {
     stats: StatBox,
     flags: FlagBox,
 }
 
-impl DataStore {
+impl DataBox {
     /// Create a new, completely empty, DataStore
-    pub fn new() -> DataStore {
-        DataStore {
+    pub fn new() -> DataBox {
+        DataBox {
             stats: StatBox::new(),
             flags: FlagBox::new(),
         }
@@ -25,12 +25,12 @@ impl DataStore {
         obj.insert("stats", self.stats.to_xff());
         xff!(obj)
     }
-    pub fn from_xff(xff: &XffValue) -> SSCCResult<DataStore> {
+    pub fn from_xff(xff: &XffValue) -> SSCCResult<DataBox> {
         if let Some(obj) = xff.as_object()
             && let Some(flags) = obj.get("flags")
             && let Some(stats) = obj.get("stats")
         {
-            Ok(DataStore {
+            Ok(DataBox {
                 stats: StatBox::from_xff(stats)?,
                 flags: FlagBox::from_xff(flags)?,
             })

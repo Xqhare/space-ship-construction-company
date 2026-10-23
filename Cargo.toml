@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 aequa = { git = "https://github.com/xqhare/aequa" }
-athena = { git = "https://github.com/xqhare/athena", features = ["bit_flags"] }
+athena = { git = "https://github.com/xqhare/athena", features = ["bit_flags", "slot_map"] }
 fortuna = { git = "https://github.com/xqhare/fortuna" }
 horae = { git = "https://github.com/xqhare/horae" }
 ilmarinen = { git = "https://github.com/xqhare/ilmarinen" }
