@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aequa"
 version = "1.3.1"
-source = "git+https://github.com/xqhare/aequa#e8a5bd70dfd064390ec47f625520aa11d4809468"
+source = "git+https://github.com/xqhare/aequa#c8d237bc1dd9ee0c59d7778dff8371488f3053eb"
 dependencies = [
  "nemesis",
 ]
@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "athena"
 version = "2.2.0"
-source = "git+https://github.com/xqhare/athena#64813a0d36afffe58eb01144c99a4f88ff0be102"
+source = "git+https://github.com/xqhare/athena#a7d8337d01d447e1b5bd9e8d56813feaf827b6e5"
 dependencies = [
  "aequa",
  "libc",
@@ -31,7 +31,7 @@ dependencies = [
 [[package]]
 name = "horae"
 version = "1.4.0"
-source = "git+https://github.com/xqhare/horae#eba4c718158aa47385f076780eb73fe327497055"
+source = "git+https://github.com/xqhare/horae#5bc832c71caf9e6bc142e275a5d4249d4864e8ea"
 dependencies = [
  "aequa",
 ]

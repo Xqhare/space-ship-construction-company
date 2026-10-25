@@ -11,7 +11,12 @@ pub enum SSCCError {
     CapabilityBuilder(String),
     ShipClassBuilder(String),
     Startup(String),
+    XffSerde(String),
     Io(std::io::Error),
+}
+
+pub fn new_xff_serde_error(msg: &str) -> NemesisError {
+    SSCCError::XffSerde(msg.to_string()).into()
 }
 
 pub fn new_generic_error(msg: &str) -> NemesisError {
@@ -54,6 +59,7 @@ impl std::error::Error for SSCCError {
             SSCCError::ComponentBuilder(msg) => msg,
             SSCCError::CapabilityBuilder(msg) => msg,
             SSCCError::ShipClassBuilder(msg) => msg,
+            SSCCError::XffSerde(msg) => msg,
             SSCCError::Startup(msg) => msg,
             SSCCError::Io(_) => "IO Error",
         }
@@ -66,6 +72,7 @@ impl From<SSCCError> for NemesisError {
     fn from(err: SSCCError) -> Self {
         let (ctx, source) = match err {
             SSCCError::Generic(ref msg) => (msg.clone(), "Generic"),
+            SSCCError::XffSerde(ref msg) => (msg.clone(), "XffSerde"),
             SSCCError::ComponentBuilder(ref msg) => (msg.clone(), "ComponentBuilder"),
             SSCCError::CapabilityBuilder(ref msg) => (msg.clone(), "CapabilityBuilder"),
             SSCCError::ShipClassBuilder(ref msg) => (msg.clone(), "ShipClassBuilder"),
@@ -84,6 +91,7 @@ impl fmt::Display for SSCCError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SSCCError::Generic(msg) => write!(f, "{}", msg),
+            SSCCError::XffSerde(msg) => write!(f, "{}", msg),
             SSCCError::ComponentBuilder(msg) => write!(f, "{}", msg),
             SSCCError::CapabilityBuilder(msg) => write!(f, "{}", msg),
             SSCCError::ShipClassBuilder(msg) => write!(f, "{}", msg),

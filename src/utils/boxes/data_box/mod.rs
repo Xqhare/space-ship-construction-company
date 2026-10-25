@@ -1,8 +1,11 @@
+pub mod flag_box;
+pub mod stat_box;
 use aequa::{Object, XffSerde, XffValue, xff};
+use nemesis::NemesisError;
 
 use crate::{
-    error::{SSCCResult, new_startup_error},
-    utils::boxes::{flag_box::FlagBox, stat_box::StatBox},
+    error::new_startup_error,
+    utils::boxes::data_box::{flag_box::FlagBox, stat_box::StatBox},
 };
 
 /// Generalised storage of data for entities
@@ -11,21 +14,17 @@ pub struct DataBox {
     flags: FlagBox,
 }
 
-impl DataBox {
-    /// Create a new, completely empty, DataStore
-    pub fn new() -> DataBox {
-        DataBox {
-            stats: StatBox::new(),
-            flags: FlagBox::new(),
-        }
-    }
-    pub fn to_xff(&self) -> XffValue {
+impl XffSerde for DataBox {
+    fn to_xff(&self) -> XffValue {
         let mut obj = Object::new();
         obj.insert("flags", self.flags.to_xff());
         obj.insert("stats", self.stats.to_xff());
         xff!(obj)
     }
-    pub fn from_xff(xff: &XffValue) -> SSCCResult<DataBox> {
+    fn from_xff(xff: &XffValue) -> Result<Self, NemesisError>
+    where
+        Self: Sized,
+    {
         if let Some(obj) = xff.as_object()
             && let Some(flags) = obj.get("flags")
             && let Some(stats) = obj.get("stats")
@@ -39,6 +38,16 @@ impl DataBox {
                 "Can't convert value to DataStore, not an object or doesn't have expected keys.",
             )
             .add_ctx(format!("Value: {:?}", xff)))
+        }
+    }
+}
+
+impl DataBox {
+    /// Create a new, completely empty, DataStore
+    pub fn new() -> DataBox {
+        DataBox {
+            stats: StatBox::new(),
+            flags: FlagBox::new(),
         }
     }
     /// Checks if a flag of that name exists or if a base value of that name exists

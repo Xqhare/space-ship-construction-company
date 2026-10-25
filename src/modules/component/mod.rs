@@ -2,14 +2,14 @@ use aequa::{Object, XffValue};
 
 use crate::{
     modules::{
-        capabilites::{Capability, CapabilityKind},
-        component::builder::ComponentBuilder,
-        modifiers::Modifier,
+        component::{builder::ComponentBuilder, capability::Capability},
+        modifier::Modifier,
     },
-    utils::boxes::stat_box::StatBox,
+    utils::boxes::data_box::{DataBox, flag_box::Flag},
 };
 
 mod builder;
+pub mod capability;
 
 /// A single component.
 ///
@@ -22,7 +22,7 @@ pub struct Component {
     /// Description
     description: String,
     /// Statistics
-    stat_box: StatBox,
+    data_box: DataBox,
     /// Any capabilities
     capabilities: Vec<Capability>,
     /// Child components
@@ -42,16 +42,16 @@ impl Component {
         ComponentBuilder::new(Component {
             name: String::new(),
             description: String::new(),
-            stat_box: StatBox::new(),
+            data_box: DataBox::new(),
             capabilities: Vec::new(),
             components: Vec::new(),
         })
     }
-    /// Return the `StatBox` of the component.
+    /// Return the `dataBox` of the component.
     ///
     /// This contains all base values and modifiers.
-    pub fn get_stat_box(&self) -> &StatBox {
-        &self.stat_box
+    pub fn get_data_box(&self) -> &DataBox {
+        &self.data_box
     }
     /// Return all modifiers of the component.
     ///
@@ -63,9 +63,9 @@ impl Component {
     ///
     /// Only 'in-use' modifiers are returned.
     ///
-    /// Modifiers are held in the `StatBox`.
+    /// Modifiers are held in the `dataBox`.
     pub fn get_modifiers(&self) -> &Vec<Modifier> {
-        &self.stat_box.get_modifiers()
+        &self.data_box.get_modifiers()
     }
     /// Return all flat modifiers of the component.
     ///
@@ -77,27 +77,27 @@ impl Component {
     ///
     /// Only 'in-use' flat modifiers are returned.
     ///
-    /// Flat modifiers are held in the `StatBox`.
+    /// Flat modifiers are held in the `dataBox`.
     pub fn get_flat_modifiers(&self) -> &Vec<Modifier> {
-        &self.stat_box.get_flat_modifiers()
+        &self.data_box.get_flat_modifiers()
     }
     /// Return all unused modifiers of the component.
     ///
     /// These modifiers are percentage modifiers.
     /// They are not used by any base value.
     ///
-    /// Unused modifiers are held in the `StatBox`.
+    /// Unused modifiers are held in the `dataBox`.
     pub fn get_unused_modifiers(&self) -> &Vec<Modifier> {
-        &self.stat_box.get_unused_modifiers()
+        &self.data_box.get_unused_modifiers()
     }
     /// Return all unused flat modifiers of the component.
     ///
     /// These modifiers are flat modifiers.
     /// They are not used by any base value.
     ///
-    /// Unused flat modifiers are held in the `StatBox`.
+    /// Unused flat modifiers are held in the `dataBox`.
     pub fn get_unused_flat_modifiers(&self) -> &Vec<Modifier> {
-        &self.stat_box.get_unused_flat_modifiers()
+        &self.data_box.get_unused_flat_modifiers()
     }
     /// Return all child components
     pub fn get_components(&self) -> &Vec<Component> {
@@ -108,8 +108,10 @@ impl Component {
         &self.capabilities
     }
     /// Check if the component has a specific capability
-    pub fn has_capacity_for(&self, capabilitykind: CapabilityKind) -> bool {
-        self.capabilities.iter().any(|c| c.is_kind(&capabilitykind))
+    pub fn has_capacity_flag(&self, capability_flag: &Flag) -> bool {
+        self.capabilities
+            .iter()
+            .any(|c| c.has_flag(capability_flag))
     }
     /// Calculate and return all base values with their modifiers applied.
     ///
@@ -121,8 +123,8 @@ impl Component {
     ///
     /// Modifiers are calculated as:
     /// `1 + (modifier_value1 + modifier_value2 + modifier_value3 + ...)`
-    pub fn get_full_stats(&self) -> Object {
-        self.stat_box.get_full_stats()
+    pub fn get_full_data(&self) -> Object {
+        self.data_box.
     }
     /// Add a base value
     ///
@@ -131,26 +133,25 @@ impl Component {
     /// Does not update unused modifiers, use `update_unused_modifiers` after calling this.
     pub fn add_base_value<S: Into<String>>(&mut self, key: S, value: XffValue) {
         let value = value.into_hp_float().unwrap();
-        self.stat_box.add_base_value(key, &value);
+        self.data_box.add_base_value(key, &value);
     }
     /// Iterate through all unused modifiers and check if a base value exists they can modify.
     /// If so they are moved to modifiers / flat modifiers.
     ///
     /// Checks both `modifiers` and `flat_modifiers`
     pub fn update_unused_modifiers(&mut self) {
-        self.stat_box.update_unused_modifiers();
+        self.data_box.update_unused_modifiers();
     }
     pub fn add_modifier(&mut self, modifier: Modifier) {
-        self.stat_box.add_modifier(modifier);
+        self.data_box.add_modifier(modifier);
     }
     /// Add a capability
     ///
     /// Any base value and modifiers from the capability are added to the current component.
     pub fn add_capability(&mut self, capability: Capability) {
-        if let Some(base_value_name) = capability.base_value_name()
-            && let Some(base_value_value) = capability.base_value_value()
-        {
-            self.stat_box
+        if let Some(base_value_pair) = capability.impacted_base_value_pair() {
+            let (base_value_name, base_value_value) = base_value_pair.as_parts();
+            self.data_box
                 .add_or_update_base_value(base_value_name, base_value_value);
         }
         for modifier in capability.inherent_modifiers() {
@@ -168,7 +169,7 @@ impl Component {
         for capability in component.get_capabilities() {
             self.add_capability(capability.clone());
         }
-        self.stat_box.add_component(&component);
+        self.data_box.add_component(&component);
         self.components.push(component);
     }
 }
@@ -176,10 +177,13 @@ impl Component {
 mod tests {
     use aequa::{XffValue, hp_float::HpFloat, xff};
 
-    use crate::modules::{
-        capabilites::{Capability, CapabilityKind},
-        component::Component,
-        modifiers::{Modifier, ModifierType},
+    use crate::{
+        consts::flags::capabilities::SPACE_FLIGHT,
+        modules::{
+            component::{Component, capability::Capability},
+            modifier::{Modifier, op::ModifierOp, r#type::ModifierType},
+        },
+        needs_home::BaseValuePair,
     };
 
     fn make_test_component() -> Component {
@@ -205,53 +209,62 @@ mod tests {
     fn full_component() {
         let mut component = make_test_component();
         let modifier = Modifier {
-            impacted_base_value_name: "health".to_string(),
+            impacted_base_value_pairs: vec![BaseValuePair::new("health", HpFloat::new(10, 0))],
             kind: ModifierType::Percentage,
-            value: 0.5.into(),
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Add,
         };
         let flat_modifier = Modifier {
-            impacted_base_value_name: "health".to_string(),
+            impacted_base_value_pairs: vec![BaseValuePair::new("health", HpFloat::new(2, 0))],
             kind: ModifierType::Flat,
-            value: 2.0.into(),
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Add,
         };
         component.add_modifier(modifier.clone());
         component.add_modifier(flat_modifier);
-        let stats = component.get_full_stats();
-        assert!(stats.contains_key("health"));
-        assert!(stats.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(6, 0));
+        let datas = component.get_full_stats();
+        assert!(datas.contains_key("health"));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(6, 0));
         component.add_component(make_test_component());
-        let stats = component.get_full_stats();
-        assert!(stats.contains_key("health"));
-        assert!(stats.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(9, 0));
+        let datas = component.get_full_stats();
+        assert!(datas.contains_key("health"));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(9, 0));
         let capability = Capability::new()
             .add_name("Test Capability")
             .add_description("Test")
-            .add_kind(CapabilityKind::SpaceFlight)
+            .add_flag(SPACE_FLIGHT.to_string())
             .add_inherent_modifier(modifier)
             .build();
         assert!(capability.is_ok());
         let capability = capability.unwrap();
         component.add_capability(capability);
-        let stats = component.get_full_stats();
-        assert!(stats.contains_key("health"));
-        assert!(stats.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(12, 0));
+        let datas = component.get_full_stats();
+        assert!(datas.contains_key("health"));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(12, 0));
     }
 
     #[test]
-    fn basic_component_stats() {
+    fn basic_component_datas() {
         let mut component = make_test_component();
-        let stats = component.get_full_stats();
-        assert!(stats.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(2, 0));
+        let datas = component.get_full_stats();
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(2, 0));
 
         let modifier = Modifier {
-            impacted_base_value_name: "health".to_string(),
+            impacted_base_value_pairs: vec![BaseValuePair::new("health", HpFloat::new(5, 1))],
             kind: ModifierType::Percentage,
-            value: 0.5.into(),
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Mul,
         };
         component.add_modifier(modifier);
-        let stats = component.get_full_stats();
-        assert!(stats.contains_key("health"));
-        assert!(stats.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(3, 0));
+        let datas = component.get_full_stats();
+        assert!(datas.contains_key("health"));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(3, 0));
     }
 
     #[test]

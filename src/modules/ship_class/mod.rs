@@ -1,7 +1,7 @@
 use crate::{
     error::{SSCCResult, new_ship_class_builder_error},
-    modules::{capabilites::Capability, component::Component},
-    utils::boxes::stat_box::StatBox,
+    modules::component::{Component, capability::Capability},
+    runtime::DataBoxSlotId,
 };
 
 #[non_exhaustive]
@@ -11,7 +11,7 @@ pub struct ShipClass {
     /// Description
     description: String,
     /// Statistic properties of the class
-    stat_box: StatBox,
+    data_box_slot_id: DataBoxSlotId,
     /// Any capabilities
     capabilities: Vec<Capability>,
     /// Components that make up the class
@@ -28,8 +28,8 @@ impl ShipClass {
     pub fn add_description<S: Into<String>>(&mut self, description: S) {
         self.description = description.into();
     }
-    pub fn add_stat_box(&mut self, stat_box: StatBox) {
-        self.stat_box = stat_box;
+    pub fn add_data_box(&mut self, stat_box_slot_id: DataBoxSlotId) {
+        self.data_box_slot_id = stat_box_slot_id;
     }
     pub fn add_capability(&mut self, capability: Capability) {
         self.capabilities.push(capability);
@@ -49,7 +49,7 @@ impl ShipClassBuilder {
             inner: ShipClass {
                 name: String::new(),
                 description: String::new(),
-                stat_box: StatBox::new(),
+                data_box_slot_id: StatBox::new(),
                 capabilities: Vec::new(),
                 components: Vec::new(),
             },

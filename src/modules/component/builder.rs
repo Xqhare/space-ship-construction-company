@@ -1,8 +1,11 @@
-use aequa::{Object, XffValue};
+use aequa::XffValue;
 
 use crate::{
     error::{SSCCResult, new_component_builder_error},
-    modules::{capabilites::Capability, component::Component, modifiers::Modifier},
+    modules::{
+        component::{Capability, Component},
+        modifier::Modifier,
+    },
 };
 #[non_exhaustive]
 #[derive(Debug, Clone)]
@@ -47,7 +50,7 @@ impl ComponentBuilder {
         if self.inner.description.is_empty() {
             errs_encountered.push("Description cannot be empty");
         }
-        if !self.inner.stat_box.has_base_values() {
+        if !self.inner.data_box.has_base_values() {
             errs_encountered.push("No base values found. At least one is required");
         }
 

@@ -2,7 +2,7 @@ use aequa::XffValue;
 use athena::float::HpFloat;
 use horae::Utc;
 
-use crate::modules::modifiers::Modifier;
+use crate::modules::modifier::Modifier;
 
 pub mod event_id_pool;
 pub mod event_queue;

@@ -1,48 +1,10 @@
-use aequa::hp_float::HpFloat;
-
 use crate::{
+    consts::flags::INTERNAL_NONE,
     error::{SSCCResult, new_capability_builder_error},
-    modules::modifiers::Modifier,
+    modules::modifier::Modifier,
+    needs_home::BaseValuePair,
+    utils::boxes::flag_box::Flag,
 };
-
-#[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[repr(u16)]
-pub enum CapabilityKind {
-    None,
-    Docking,
-    SpaceFlight,
-    AtmosphericFlight,
-    InterstellarFlight,
-    CivilianDataUplink,
-    CivilianDataDownlink,
-    MilitaryDataUplink,
-    MilitaryDataDownlink,
-    PositionHolding,
-    ElectronicDefensiveSystems,
-    ElectronicOffensiveSystems,
-    ElectronicCountermeasures,
-    /// Can be landed on something else
-    Landing,
-    /// Can be landed on
-    Landable,
-    CargoHold,
-    Research,
-    Scout,
-    Mine,
-    Harvest,
-    Grow,
-    /// Can give out supplies
-    Supply,
-    /// Can repair others
-    Repair,
-    /// Can repair itself
-    RepairOwn,
-    /// Can receive supplies
-    Replenishable,
-    Salvage,
-    Passanger,
-}
 
 /// Capability of a component
 #[non_exhaustive]
@@ -50,9 +12,9 @@ pub enum CapabilityKind {
 pub struct Capability {
     name: String,
     description: String,
-    kind: CapabilityKind,
-    base_value_name: Option<String>,
-    base_value_value: Option<HpFloat>,
+    flag: Flag,
+    impacted_base_value_pair: Option<BaseValuePair>,
+    // TODO: Consider timed modifiers
     inherent_modifiers: Vec<Modifier>,
 }
 
@@ -68,24 +30,23 @@ impl Capability {
     pub fn new() -> CapabilityBuilder {
         CapabilityBuilder::new()
     }
-    pub fn add_name<S: Into<String>>(&mut self, name: S) {
+    fn add_name<S: Into<String>>(&mut self, name: S) {
         self.name = name.into();
     }
-    pub fn add_description<S: Into<String>>(&mut self, description: S) {
+    fn add_description<S: Into<String>>(&mut self, description: S) {
         self.description = description.into();
     }
-    pub fn add_kind(&mut self, kind: CapabilityKind) {
-        self.kind = kind;
+    fn add_flag(&mut self, flag: Flag) {
+        self.flag = flag;
     }
-    pub fn add_base_value_pair<S: Into<String>>(&mut self, name: S, value: HpFloat) {
-        self.base_value_name = Some(name.into());
-        self.base_value_value = Some(value);
+    fn add_impacted_base_value_pair(&mut self, base_value_pair: BaseValuePair) {
+        self.impacted_base_value_pair = Some(base_value_pair);
     }
-    pub fn add_inherent_modifier(&mut self, modifier: Modifier) {
+    fn add_inherent_modifier(&mut self, modifier: Modifier) {
         self.inherent_modifiers.push(modifier);
     }
-    pub fn is_kind(&self, kind: &CapabilityKind) -> bool {
-        &self.kind == kind
+    pub fn has_flag(&self, flag: &Flag) -> bool {
+        &self.flag == flag
     }
     pub fn name(&self) -> &str {
         &self.name
@@ -93,14 +54,11 @@ impl Capability {
     pub fn description(&self) -> &str {
         &self.description
     }
-    pub fn kind(&self) -> &CapabilityKind {
-        &self.kind
+    pub fn flag(&self) -> &Flag {
+        &self.flag
     }
-    pub fn base_value_name(&self) -> &Option<String> {
-        &self.base_value_name
-    }
-    pub fn base_value_value(&self) -> &Option<HpFloat> {
-        &self.base_value_value
+    pub fn impacted_base_value_pair(&self) -> &Option<BaseValuePair> {
+        &self.impacted_base_value_pair
     }
     pub fn inherent_modifiers(&self) -> &Vec<Modifier> {
         &self.inherent_modifiers
@@ -117,9 +75,8 @@ impl CapabilityBuilder {
             inner: Capability {
                 name: String::new(),
                 description: String::new(),
-                kind: CapabilityKind::None,
-                base_value_name: None,
-                base_value_value: None,
+                flag: INTERNAL_NONE.to_string(),
+                impacted_base_value_pair: None,
                 inherent_modifiers: Vec::new(),
             },
         }
@@ -132,12 +89,12 @@ impl CapabilityBuilder {
         self.inner.add_description(description);
         self
     }
-    pub fn add_kind(mut self, kind: CapabilityKind) -> Self {
-        self.inner.add_kind(kind);
+    pub fn add_flag(mut self, flag: Flag) -> Self {
+        self.inner.add_flag(flag);
         self
     }
-    pub fn add_base_value_pair<S: Into<String>>(mut self, name: S, value: HpFloat) -> Self {
-        self.inner.add_base_value_pair(name, value);
+    pub fn add_impacted_base_value_pair(mut self, base_value_pair: BaseValuePair) -> Self {
+        self.inner.add_impacted_base_value_pair(base_value_pair);
         self
     }
     pub fn add_inherent_modifier(mut self, modifier: Modifier) -> Self {
@@ -153,8 +110,8 @@ impl CapabilityBuilder {
         if self.inner.description.is_empty() {
             errs_encountered.push("Description cannot be empty");
         }
-        if self.inner.kind == CapabilityKind::None {
-            errs_encountered.push("Kind cannot be None");
+        if self.inner.flag == INTERNAL_NONE {
+            errs_encountered.push("Flag cannot be None");
         }
         if errs_encountered.len() == 0 {
             Ok(self.inner)
