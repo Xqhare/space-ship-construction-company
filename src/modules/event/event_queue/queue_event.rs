@@ -1,5 +1,7 @@
-use aequa::{Object, XffValue, xff};
+use aequa::{Object, XffSerde, XffValue, xff};
 use horae::Utc;
+
+use crate::error::new_xff_serde_error;
 
 #[derive(Debug, Clone)]
 pub struct QueueEvent {
@@ -19,34 +21,21 @@ impl QueueEvent {
             user_interupt,
         }
     }
-    pub fn from_xff(value: XffValue) -> Result<QueueEvent, ()> {
-        value.try_into()
-    }
-    pub fn to_xff(&self) -> XffValue {
-        self.into()
-    }
 }
 
-impl Into<XffValue> for &QueueEvent {
-    fn into(self) -> XffValue {
+impl XffSerde for QueueEvent {
+    fn to_xff(&self) -> XffValue {
         let mut obj = Object::new();
-        obj.insert("time", self.time.to_xffvalue());
+        obj.insert("time", self.time.to_xff());
         obj.insert("event_id", self.event_id);
         obj.insert("user_interupt", self.user_interupt);
         xff!(obj)
     }
-}
-
-impl Into<XffValue> for QueueEvent {
-    fn into(self) -> XffValue {
-        (&self).into()
-    }
-}
-
-impl TryFrom<&XffValue> for QueueEvent {
-    type Error = ();
-    fn try_from(value: &XffValue) -> Result<QueueEvent, Self::Error> {
-        if let Some(obj) = value.as_object()
+    fn from_xff(xff: &XffValue) -> Result<Self, nemesis::NemesisError>
+    where
+        Self: Sized,
+    {
+        if let Some(obj) = xff.as_object()
             && let Some(time) = obj.get("time")
             && let Some(id) = obj.get("event_id")
             && let Some(user_interupt) = obj.get("user_interupt")
@@ -54,25 +43,20 @@ impl TryFrom<&XffValue> for QueueEvent {
             if let Some(id) = id.as_number()
                 && let Some(id) = id.into_usize()
                 && let Some(user_interupt) = user_interupt.as_boolean()
-                && let Some(time) = Utc::from_xffvalue(time.clone())
             {
+                let time = Utc::from_xff(time)?;
                 Ok(QueueEvent {
                     time,
                     event_id: id,
                     user_interupt: *user_interupt,
                 })
             } else {
-                Err(())
+                Err(new_xff_serde_error("Unable to load QueueEvent from XFF")
+                    .add_ctx(format!("Value: {xff:?}")))
             }
         } else {
-            Err(())
+            Err(new_xff_serde_error("Unable to load QueueEvent from XFF")
+                .add_ctx(format!("Value: {xff:?}")))
         }
-    }
-}
-
-impl TryFrom<XffValue> for QueueEvent {
-    type Error = ();
-    fn try_from(value: XffValue) -> Result<QueueEvent, Self::Error> {
-        (&value).try_into()
     }
 }

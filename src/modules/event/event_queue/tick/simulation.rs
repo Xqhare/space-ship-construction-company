@@ -73,6 +73,8 @@ impl SimulationTick {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum SimulationTickKind {
+    // Should I at some point want smaller simulation ticks:
+    // Sec, HalfMin, Min, HalfHour, Hour, QuarterDay, HalfDay, ThreeQuartersDay,
     Day = 0,
     Week = 1,
     Fortnight = 2,
