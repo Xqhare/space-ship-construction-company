@@ -1,15 +1,9 @@
-use std::time::Duration;
-
 use aequa::{Array, Object, XffSerde, XffValue, hp_float::HpFloat, xff};
 use horae::Utc;
 
 use crate::{
     error::{SSCCResult, new_startup_error},
-    modules::{
-        component::Component,
-        modifier::{Modifier, ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
-    },
-    needs_home::BaseValuePair,
+    modules::modifier::{ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
 };
 
 #[derive(Debug, Clone)]
@@ -369,68 +363,80 @@ fn drop_modifiers_past_date(
     out
 }
 
-#[test]
-fn simple_stat_box() {
-    let mut stat_box = StatBox::new();
-    let utc = Utc::now();
-    stat_box.add_base_value("health", &HpFloat::from(10.0));
-    let modifier = Modifier {
-        impacted_base_value_pairs: vec![BaseValuePair {
-            base_value_name: "health".to_string(),
-            base_value_value: HpFloat::from(2.0),
-        }],
-        kind: ModifierType::Percentage,
-        duration: None,
-        adds_flags: None,
-        required_flags: None,
-        op: ModifierOp::Add,
-    };
-    stat_box.add_modifier(ModifierWithEndUtc::new(modifier, utc));
-    let flat_modifier = Modifier {
-        impacted_base_value_pairs: vec![BaseValuePair {
-            base_value_name: "health".to_string(),
-            base_value_value: HpFloat::from(2.0),
-        }],
-        kind: ModifierType::Flat,
-        duration: None,
-        adds_flags: None,
-        required_flags: None,
-        op: ModifierOp::Add,
-    };
-    stat_box.add_modifier(ModifierWithEndUtc::new(flat_modifier, utc));
-    let result = stat_box.get_full_stats();
-    assert!(result.len() == 1);
-    assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(18.0));
-    let unused_modifier = Modifier {
-        impacted_base_value_pairs: vec![BaseValuePair {
-            base_value_name: "weight".to_string(),
-            base_value_value: HpFloat::from(2.0),
-        }],
-        kind: ModifierType::Percentage,
-        duration: None,
-        adds_flags: None,
-        required_flags: None,
-        op: ModifierOp::Add,
-    };
-    stat_box.add_modifier(ModifierWithEndUtc::new(unused_modifier, utc));
-    let unused_flat_modifier = Modifier {
-        impacted_base_value_pairs: vec![BaseValuePair {
-            base_value_name: "weight".to_string(),
-            base_value_value: HpFloat::from(2.0),
-        }],
-        kind: ModifierType::Flat,
-        duration: None,
-        adds_flags: None,
-        required_flags: None,
-        op: ModifierOp::Add,
-    };
-    stat_box.add_modifier(ModifierWithEndUtc::new(unused_flat_modifier, utc));
-    let result = stat_box.get_full_stats();
-    assert!(result.len() == 1);
-    stat_box.add_base_value("weight", &HpFloat::from(5.0));
-    let result = stat_box.get_full_stats();
-    assert!(result.len() == 2);
+#[cfg(test)]
+mod tests {
+    use athena::float::HpFloat;
+    use horae::Utc;
 
-    assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(18.0));
-    assert!(result.get("weight").unwrap().as_hp_float().unwrap() == &HpFloat::from(2.0));
+    use crate::{
+        modules::modifier::{Modifier, ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
+        needs_home::BaseValuePair,
+        utils::boxes::data_box::stat_box::StatBox,
+    };
+
+    #[test]
+    fn simple_stat_box() {
+        let mut stat_box = StatBox::new();
+        let utc = Utc::now();
+        stat_box.add_base_value("health", &HpFloat::from(10.0));
+        let modifier = Modifier {
+            impacted_base_value_pairs: vec![BaseValuePair {
+                base_value_name: "health".to_string(),
+                base_value_value: HpFloat::from(2.0),
+            }],
+            kind: ModifierType::Percentage,
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Add,
+        };
+        stat_box.add_modifier(ModifierWithEndUtc::new(modifier, utc));
+        let flat_modifier = Modifier {
+            impacted_base_value_pairs: vec![BaseValuePair {
+                base_value_name: "health".to_string(),
+                base_value_value: HpFloat::from(2.0),
+            }],
+            kind: ModifierType::Flat,
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Add,
+        };
+        stat_box.add_modifier(ModifierWithEndUtc::new(flat_modifier, utc));
+        let result = stat_box.get_full_stats();
+        assert!(result.len() == 1);
+        assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(18.0));
+        let unused_modifier = Modifier {
+            impacted_base_value_pairs: vec![BaseValuePair {
+                base_value_name: "weight".to_string(),
+                base_value_value: HpFloat::from(2.0),
+            }],
+            kind: ModifierType::Percentage,
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Add,
+        };
+        stat_box.add_modifier(ModifierWithEndUtc::new(unused_modifier, utc));
+        let unused_flat_modifier = Modifier {
+            impacted_base_value_pairs: vec![BaseValuePair {
+                base_value_name: "weight".to_string(),
+                base_value_value: HpFloat::from(2.0),
+            }],
+            kind: ModifierType::Flat,
+            duration: None,
+            adds_flags: None,
+            required_flags: None,
+            op: ModifierOp::Add,
+        };
+        stat_box.add_modifier(ModifierWithEndUtc::new(unused_flat_modifier, utc));
+        let result = stat_box.get_full_stats();
+        assert!(result.len() == 1);
+        stat_box.add_base_value("weight", &HpFloat::from(5.0));
+        let result = stat_box.get_full_stats();
+        assert!(result.len() == 2);
+
+        assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(18.0));
+        assert!(result.get("weight").unwrap().as_hp_float().unwrap() == &HpFloat::from(2.0));
+    }
 }
