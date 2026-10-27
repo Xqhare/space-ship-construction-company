@@ -1,3 +1,5 @@
+use athena::slot_map::SlotMapIndex;
+
 use crate::{
     error::{SSCCResult, new_ship_class_builder_error},
     modules::component::{Component, capability::Capability},
@@ -49,7 +51,7 @@ impl ShipClassBuilder {
             inner: ShipClass {
                 name: String::new(),
                 description: String::new(),
-                data_box_slot_id: StatBox::new(),
+                data_box_slot_id: SlotMapIndex::new_dummy(),
                 capabilities: Vec::new(),
                 components: Vec::new(),
             },
@@ -63,8 +65,8 @@ impl ShipClassBuilder {
         self.inner.add_description(description);
         self
     }
-    pub fn add_stat_box(mut self, stat_box: StatBox) -> Self {
-        self.inner.add_stat_box(stat_box);
+    pub fn add_data_box(mut self, data_box_id: DataBoxSlotId) -> Self {
+        self.inner.add_data_box(data_box_id);
         self
     }
     pub fn add_capability(mut self, capability: Capability) -> Self {
@@ -83,6 +85,9 @@ impl ShipClassBuilder {
         }
         if self.inner.description.is_empty() {
             errs_encountered.push("Description cannot be empty");
+        }
+        if self.inner.data_box_slot_id.is_dummy() {
+            errs_encountered.push("Data box slot id cannot be dummy");
         }
         if errs_encountered.len() == 0 {
             Ok(self.inner)

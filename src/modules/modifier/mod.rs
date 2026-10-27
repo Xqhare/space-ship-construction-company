@@ -37,7 +37,7 @@ impl XffSerde for ModifierWithEndUtc {
         let mut obj = Object::new();
         obj.insert("modifier", self.modifier.to_xff());
         if let Some(utc) = &self.end_utc {
-            obj.insert("end_utc", utc.to_xffvalue());
+            obj.insert("end_utc", utc.to_xff());
         }
         xff!(obj)
     }
@@ -48,10 +48,8 @@ impl XffSerde for ModifierWithEndUtc {
         if let Some(obj) = xff.as_object()
             && let Some(modifier) = obj.get("modifier")
         {
-            let end_utc = if let Some(end_utc) = obj.get("end_utc")
-                && let Some(end_utc) = Utc::from_xffvalue(end_utc.clone())
-            {
-                Some(end_utc)
+            let end_utc = if let Some(end_utc) = obj.get("end_utc") {
+                Some(Utc::from_xff(end_utc)?)
             } else {
                 None
             };
