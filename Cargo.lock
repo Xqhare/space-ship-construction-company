@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aequa"
 version = "1.3.1"
-source = "git+https://github.com/xqhare/aequa#c8d237bc1dd9ee0c59d7778dff8371488f3053eb"
+source = "git+https://github.com/xqhare/aequa#edb8d9ed24d6421bc6170cd88fd8fe0c293d624f"
 dependencies = [
  "nemesis",
 ]
@@ -30,16 +30,17 @@ dependencies = [
 
 [[package]]
 name = "horae"
-version = "1.4.0"
-source = "git+https://github.com/xqhare/horae#5bc832c71caf9e6bc142e275a5d4249d4864e8ea"
+version = "1.4.1"
+source = "git+https://github.com/xqhare/horae#3ea51e922a125a5651cde7b954a5f1b5e001334f"
 dependencies = [
  "aequa",
+ "nemesis",
 ]
 
 [[package]]
 name = "ilmarinen"
-version = "1.2.0"
-source = "git+https://github.com/xqhare/ilmarinen#04c7b0241cff08ad6f63666cd8e47ad05032fccd"
+version = "1.2.1"
+source = "git+https://github.com/xqhare/ilmarinen#70759c78872c1e169b4ebb703d1b663f4efabc32"
 dependencies = [
  "fortuna",
  "mawu",
