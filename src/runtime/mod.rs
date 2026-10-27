@@ -27,29 +27,20 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    pub fn increment_time(&mut self, duration: Duration) -> Option<Duration> {
+    pub fn increment_time(&mut self, desired_duration: Duration) -> Option<Duration> {
         if let Some(event_queue_output) = self
             .event_queue
-            .get_next_event(self.super_box.world_box().now_utc(), duration)
+            .get_next_event(self.super_box.world_box().now_utc(), desired_duration)
         {
+            todo!("inc world time & stuff");
             Some(self.handle_event(event_queue_output))
         } else {
             None
         }
     }
-    fn handle_event(&mut self, event_queue_output: (QueueItem, Duration)) -> Duration {
-        let (queue_item, duration) = event_queue_output;
-        match queue_item {
-            QueueItem::Tick(tick) => {
-                todo!("match tick and do stuff as appropriate")
-            }
-            QueueItem::Event(event) => {
-                todo!("look at event struct and do stuff as appropriate")
-            }
-            QueueItem::Modifier(modifier) => {
-                todo!("look at modifier struct and do stuff as appropriate")
-            }
-        }
+    fn handle_event(&mut self, event_queue_output: (Vec<QueueItem>, Duration)) -> Duration {
+        let (queue_items, duration) = event_queue_output;
+        todo!("handle event")
     }
     pub fn new_seeded<V: Into<Vec<char>>, P: AsRef<Path>>(
         init_world_seed: V,
