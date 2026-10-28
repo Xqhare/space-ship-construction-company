@@ -77,21 +77,21 @@ pub enum SpecialTickKind {
     Triennial = 1,
     /// Every 5 years
     Quintennial = 2,
+    // NOTE: From here on, I expect a low single digit amount of ticks of these kinds to happen in a long to very long game.
     /// Every 10 years
     Decennial = 3,
     /// Every 25 years
     Quadranscentennial = 4,
-    // NOTE: From here on, I expect at most one or two ticks of these kinds to happen in a long to very long game.
     // They are likely to trigger special events for dedicated players
     /// Every 50 years
     Semicentennial = 5,
     /// Every 75 years
     Demisesquicentennial = 6,
+    // NOTE: I expect these kinds to almost never trigger in a save. They should be a reward for the most dedicated players
     /// Every 100 years
     Centennial = 7,
     /// Every 125 years
     Quasquicentennial = 8,
-    // NOTE: I expect these kinds to almost never trigger in a save. They should be a reward for the most dedicated players
     /// Every 150 years
     Sesquicentennial = 9,
     /// Every 175 years
@@ -104,7 +104,7 @@ pub enum SpecialTickKind {
     Semiseptcentennial = 13,
     /// Every 400 years
     Quadricentennial = 14,
-    // NOTE: With the current start date of 2500, this would trigger on 01.01.3000
+    // NOTE: With the current start date of 2500, this would trigger on 3000.01.01
     /// Every 500 years (EU5 Equivalent; Technically a few days more)
     Quincentennial = 15,
 }
