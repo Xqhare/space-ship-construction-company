@@ -156,16 +156,7 @@ impl EventQueue {
     ///
     /// The first missing `TickKind` is returned.
     ///
-    /// Use together with [`EventQueue::new_tick`]:
-    /// ```
-    /// use horae::Utc;
-    /// use space_ship_construction_company::modules::event::event_queue::EventQueue;
-    /// let mut queue = EventQueue::new(Utc::now());
-    /// while let Some(missing_tick) = queue.tick_kind_missing() {
-    ///     queue.new_tick(Utc::now(), missing_tick);
-    /// }
-    /// assert!(queue.tick_kind_missing().is_none());
-    /// ```
+    /// Use together with [`EventQueue::new_tick`]
     fn tick_kind_missing(&self) -> Option<TickKind> {
         for n in 0..SIMULATION_TICK_KIND_AMOUNT {
             if !self.present_simulation_ticks.read(n as usize) {
