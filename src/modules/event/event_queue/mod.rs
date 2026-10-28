@@ -273,7 +273,7 @@ fn queue_only_returns_next_item() {
     let now = Utc::from_ymd_hms(2000, 1, 1, 0, 0, 0);
     let mut queue = EventQueue::new(now);
     assert!(queue.tick_kind_missing().is_none());
-    assert!(queue.queue_len() == 16);
+    assert!(queue.queue_len() == 16 + 8);
     let next_event = queue.get_next_event(now, Duration::from_hours(124));
     assert!(next_event.is_some());
     let next_event = next_event.unwrap();
@@ -298,7 +298,7 @@ fn queue_regenerates_ticks() {
     let now = Utc::from_ymd_hms(2000, 1, 1, 0, 0, 0);
     let mut queue = EventQueue::new(now);
     assert!(queue.tick_kind_missing().is_none());
-    assert!(queue.queue_len() == 16);
+    assert!(queue.queue_len() == 16 + 8);
     let next_event = queue.get_next_event(now, Duration::from_hours(24));
     assert!(next_event.is_some());
     let next_event = next_event.unwrap();
@@ -314,5 +314,5 @@ fn queue_regenerates_ticks() {
     assert!(kind == TickKind::Simulation(SimulationTickKind::Day));
 
     assert!(queue.tick_kind_missing().is_none());
-    assert!(queue.queue_len() == 16);
+    assert!(queue.queue_len() == 16 + 8);
 }
