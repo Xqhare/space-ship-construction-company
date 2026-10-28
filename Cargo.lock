@@ -73,7 +73,7 @@ source = "git+https://github.com/xqhare/nemesis#8bb94ecc2355caa7427f73424963f0ed
 
 [[package]]
 name = "space-ship-construction-company"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aequa",
  "athena",
