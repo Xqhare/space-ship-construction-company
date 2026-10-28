@@ -159,6 +159,7 @@ mod tests {
             .get_mut(*component.get_data_box())
             .expect("Id must exist");
         let stb = db.get_stat_box_mut();
+        stb.add_base_value("health", &HpFloat::new(2, 0));
         stb.add_modifier(modifier_utc.clone());
         stb.add_modifier(flat_modifier);
         let datas = stb.get_full_stats();
