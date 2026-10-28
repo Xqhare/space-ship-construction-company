@@ -454,11 +454,11 @@ mod tests {
         stat_box.add_modifier(ModifierWithEndUtc::new(flat_modifier, utc));
         let result = stat_box.get_full_stats();
         assert!(result.len() == 1);
-        assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(18.0));
+        assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(36.0));
         let unused_modifier = Modifier {
             impacted_base_value_pairs: vec![BaseValuePair {
                 base_value_name: "weight".to_string(),
-                base_value_value: HpFloat::from(2.0),
+                base_value_value: HpFloat::from(0.0),
             }],
             kind: ModifierType::Percentage,
             duration: None,
@@ -485,7 +485,7 @@ mod tests {
         let result = stat_box.get_full_stats();
         assert!(result.len() == 2);
 
-        assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(18.0));
-        assert!(result.get("weight").unwrap().as_hp_float().unwrap() == &HpFloat::from(2.0));
+        assert!(result.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::from(36.0));
+        assert!(result.get("weight").unwrap().as_hp_float().unwrap() == &HpFloat::from(7.0));
     }
 }
