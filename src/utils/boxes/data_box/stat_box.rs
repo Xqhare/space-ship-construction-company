@@ -9,14 +9,14 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct StatBox {
     /// Base values (no modifiers)
-    /// Range: -inf - inf
+    /// Range: -inf…inf
     /// Technically (HpFloat): i128::MAX/MIN * 10^0/u32::MAX
     base_values: Object,
     /// Any modifier that modifies the base values
-    /// Range: -1.0 - 1.0
+    /// Range: -1.0…1.0
     modifiers: Vec<ModifierWithEndUtc>,
     /// Any modifier that is added to the base values before applying modifiers
-    /// Range: -inf - inf
+    /// Range: -inf…inf
     /// Technically (HpFloat): i128::MAX/MIN * 10^u32::MAX
     flat_modifiers: Vec<ModifierWithEndUtc>,
     /// Any modifier that does not currently modify the base values
@@ -282,6 +282,55 @@ impl StatBox {
         for modifier in modifiers {
             self.add_modifier(modifier);
         }
+    }
+    /// Add all values from `other` to `self`.
+    ///
+    /// If a base value of `other` already exists in `self`, it will remain unchanged.
+    ///
+    /// All modifiers of `other` will be added to `self`
+    pub fn extend(&mut self, other: &StatBox) {
+        for (base_value_key, base_value) in &other.base_values {
+            if !self.base_values.contains_key(&base_value_key) {
+                self.base_values
+                    .insert(base_value_key.clone(), base_value.clone());
+            }
+        }
+        self.extend_modifiers(other);
+    }
+    /// Add all values from `other` to `self`.
+    ///
+    /// If a base value of `other` already exists in `self`, their values will be added together to form the new value.
+    ///
+    /// All modifiers of `other` will be added to `self`
+    pub fn extend_adding_bases(&mut self, other: &StatBox) {
+        for (base_value_key, base_value) in &other.base_values {
+            if let Some(existing_base_value) = self.base_values.get_mut(&base_value_key)
+                && let Some(existing_base_value_cast) = existing_base_value.into_hp_float()
+                && let Some(base_value_cast) = base_value.into_hp_float()
+            {
+                *existing_base_value = xff!(existing_base_value_cast + base_value_cast);
+            } else {
+                self.base_values
+                    .insert(base_value_key.clone(), base_value.clone());
+            }
+        }
+        self.extend_modifiers(other);
+    }
+    /// Only extends modifiers
+    ///
+    /// Does not extend base values at all.
+    ///
+    /// Assumes that base values of `other` already exist in `self`.
+    ///
+    /// Designed to be used inside `extend`
+    fn extend_modifiers(&mut self, other: &StatBox) {
+        // NOTE: As all base values of other are guaranteed to be in self.base_values
+        // All modifiers active in `other` must also apply to `self`
+        self.modifiers.extend(other.modifiers.clone());
+        self.flat_modifiers.extend(other.flat_modifiers.clone());
+        // NOTE: Unused modifiers may be in use in `self`
+        self.add_modifiers(other.unused_modifiers.clone());
+        self.add_modifiers(other.unused_flat_modifiers.clone());
     }
 }
 

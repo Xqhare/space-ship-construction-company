@@ -1,10 +1,6 @@
-use aequa::{Object, XffValue};
-
 use crate::{
-    modules::{
-        component::{builder::ComponentBuilder, capability::Capability},
-        modifier::Modifier,
-    },
+    modules::component::{builder::ComponentBuilder, capability::Capability},
+    runtime::DataBoxSlotId,
     utils::boxes::data_box::{DataBox, flag_box::Flag},
 };
 
@@ -22,7 +18,7 @@ pub struct Component {
     /// Description
     description: String,
     /// Statistics
-    data_box: DataBox,
+    data_box_id: DataBoxSlotId,
     /// Any capabilities
     capabilities: Vec<Capability>,
     /// Child components
@@ -38,11 +34,11 @@ impl Component {
     /// - `name` via [ComponentBuilder::add_name]
     /// - `description` via [ComponentBuilder::add_description]
     /// - At least one `base_value` via [ComponentBuilder::add_base_value]
-    pub fn new() -> ComponentBuilder {
+    pub fn new(data_box_id: DataBoxSlotId) -> ComponentBuilder {
         ComponentBuilder::new(Component {
             name: String::new(),
             description: String::new(),
-            data_box: DataBox::new(),
+            data_box_id,
             capabilities: Vec::new(),
             components: Vec::new(),
         })
@@ -50,54 +46,8 @@ impl Component {
     /// Return the `dataBox` of the component.
     ///
     /// This contains all base values and modifiers.
-    pub fn get_data_box(&self) -> &DataBox {
-        &self.data_box
-    }
-    /// Return all modifiers of the component.
-    ///
-    /// These modifiers are percentage modifiers.
-    ///
-    /// In the general formula:
-    /// `final_value = (base_value + sum(flat_modifiers)) * (1 + sum(modifiers))`
-    /// They represent the `modifiers` part of the formula.
-    ///
-    /// Only 'in-use' modifiers are returned.
-    ///
-    /// Modifiers are held in the `dataBox`.
-    pub fn get_modifiers(&self) -> &Vec<Modifier> {
-        &self.data_box.get_modifiers()
-    }
-    /// Return all flat modifiers of the component.
-    ///
-    /// These modifiers are flat modifiers.
-    ///
-    /// In the general formula:
-    /// `final_value = (base_value + sum(flat_modifiers)) * (1 + sum(modifiers))`
-    /// They represent the `flat_modifiers` part of the formula.
-    ///
-    /// Only 'in-use' flat modifiers are returned.
-    ///
-    /// Flat modifiers are held in the `dataBox`.
-    pub fn get_flat_modifiers(&self) -> &Vec<Modifier> {
-        &self.data_box.get_flat_modifiers()
-    }
-    /// Return all unused modifiers of the component.
-    ///
-    /// These modifiers are percentage modifiers.
-    /// They are not used by any base value.
-    ///
-    /// Unused modifiers are held in the `dataBox`.
-    pub fn get_unused_modifiers(&self) -> &Vec<Modifier> {
-        &self.data_box.get_unused_modifiers()
-    }
-    /// Return all unused flat modifiers of the component.
-    ///
-    /// These modifiers are flat modifiers.
-    /// They are not used by any base value.
-    ///
-    /// Unused flat modifiers are held in the `dataBox`.
-    pub fn get_unused_flat_modifiers(&self) -> &Vec<Modifier> {
-        &self.data_box.get_unused_flat_modifiers()
+    pub fn get_data_box(&self) -> &DataBoxSlotId {
+        &self.data_box_id
     }
     /// Return all child components
     pub fn get_components(&self) -> &Vec<Component> {
@@ -113,49 +63,20 @@ impl Component {
             .iter()
             .any(|c| c.has_flag(capability_flag))
     }
-    /// Calculate and return all base values with their modifiers applied.
-    ///
-    /// Flat modifiers are applied before modifiers:
-    /// `(base_value + flat_modifier) * modifier`
-    ///
-    /// Flat modifiers are calculated as:
-    /// `flat_modifier1 + flat_modifier2 + flat_modifier3 + ...`
-    ///
-    /// Modifiers are calculated as:
-    /// `1 + (modifier_value1 + modifier_value2 + modifier_value3 + ...)`
-    pub fn get_full_data(&self) -> Object {
-        self.data_box.
-    }
-    /// Add a base value
-    ///
-    /// If a base value with the key exists, it will be overwritten
-    ///
-    /// Does not update unused modifiers, use `update_unused_modifiers` after calling this.
-    pub fn add_base_value<S: Into<String>>(&mut self, key: S, value: XffValue) {
-        let value = value.into_hp_float().unwrap();
-        self.data_box.add_base_value(key, &value);
-    }
-    /// Iterate through all unused modifiers and check if a base value exists they can modify.
-    /// If so they are moved to modifiers / flat modifiers.
-    ///
-    /// Checks both `modifiers` and `flat_modifiers`
-    pub fn update_unused_modifiers(&mut self) {
-        self.data_box.update_unused_modifiers();
-    }
-    pub fn add_modifier(&mut self, modifier: Modifier) {
-        self.data_box.add_modifier(modifier);
-    }
     /// Add a capability
     ///
     /// Any base value and modifiers from the capability are added to the current component.
-    pub fn add_capability(&mut self, capability: Capability) {
+    pub fn add_capability(&mut self, capability: Capability, data_box_ref: &mut DataBox) {
         if let Some(base_value_pair) = capability.impacted_base_value_pair() {
             let (base_value_name, base_value_value) = base_value_pair.as_parts();
-            self.data_box
+            data_box_ref
+                .get_stat_box_mut()
                 .add_or_update_base_value(base_value_name, base_value_value);
         }
         for modifier in capability.inherent_modifiers() {
-            self.add_modifier(modifier.clone());
+            data_box_ref
+                .get_stat_box_mut()
+                .add_modifier(modifier.clone());
         }
         self.capabilities.push(capability);
     }
@@ -165,49 +86,57 @@ impl Component {
     /// directly.
     ///
     /// Base value is additive. Multiple components with the same modifier will stack
-    pub fn add_component(&mut self, component: Component) {
+    pub fn add_component(&mut self, component: Component, data_box_ref: &mut DataBox) {
         for capability in component.get_capabilities() {
-            self.add_capability(capability.clone());
+            self.add_capability(capability.clone(), data_box_ref);
         }
-        self.data_box.add_component(&component);
+        for child_comp in component.get_components() {
+            self.add_component(child_comp.clone(), data_box_ref);
+        }
         self.components.push(component);
     }
 }
 
+#[cfg(test)]
 mod tests {
-    use aequa::{XffValue, hp_float::HpFloat, xff};
+    use aequa::hp_float::HpFloat;
+    use athena::slot_map::{SlotMap, SlotMapIndex};
 
     use crate::{
         consts::flags::capabilities::SPACE_FLIGHT,
         modules::{
             component::{Component, capability::Capability},
-            modifier::{Modifier, op::ModifierOp, r#type::ModifierType},
+            modifier::{Modifier, ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
         },
         needs_home::BaseValuePair,
+        runtime::DataBoxSlotId,
+        utils::boxes::data_box::DataBox,
     };
 
-    fn make_test_component() -> Component {
-        Component::new()
+    fn make_test_component(slot_id: DataBoxSlotId) -> Component {
+        Component::new(slot_id)
             .add_name("Test Component")
             .add_description("Test")
-            .add_base_value("health", xff!(2.0))
             .build()
-            .unwrap()
+            .expect("Test component should be valid")
     }
 
     #[test]
     fn basic_component_builder() {
-        let component = Component::new()
+        let mut map = SlotMap::new();
+        let real_id = map.insert("test");
+        let component = Component::new(real_id)
             .add_name("Test Component")
             .add_description("Test")
-            .add_base_value("health", xff!(2.0))
             .build();
         assert!(component.is_ok());
     }
 
     #[test]
     fn full_component() {
-        let mut component = make_test_component();
+        let mut map = SlotMap::new();
+        let real_id = map.insert(DataBox::new());
+        let mut component = make_test_component(real_id);
         let modifier = Modifier {
             impacted_base_value_pairs: vec![BaseValuePair::new("health", HpFloat::new(10, 0))],
             kind: ModifierType::Percentage,
@@ -216,6 +145,7 @@ mod tests {
             required_flags: None,
             op: ModifierOp::Add,
         };
+        let modifier_utc = ModifierWithEndUtc::new_no_end(modifier);
         let flat_modifier = Modifier {
             impacted_base_value_pairs: vec![BaseValuePair::new("health", HpFloat::new(2, 0))],
             kind: ModifierType::Flat,
@@ -224,33 +154,46 @@ mod tests {
             required_flags: None,
             op: ModifierOp::Add,
         };
-        component.add_modifier(modifier.clone());
-        component.add_modifier(flat_modifier);
-        let datas = component.get_full_stats();
+        let flat_modifier = ModifierWithEndUtc::new_no_end(flat_modifier);
+        let db = map
+            .get_mut(*component.get_data_box())
+            .expect("Id must exist");
+        let stb = db.get_stat_box_mut();
+        stb.add_modifier(modifier_utc.clone());
+        stb.add_modifier(flat_modifier);
+        let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(6, 0));
-        component.add_component(make_test_component());
-        let datas = component.get_full_stats();
+        component.add_component(make_test_component(real_id), db);
+        let stb = db.get_stat_box_mut();
+        let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(9, 0));
         let capability = Capability::new()
             .add_name("Test Capability")
             .add_description("Test")
             .add_flag(SPACE_FLIGHT.to_string())
-            .add_inherent_modifier(modifier)
+            .add_inherent_modifier(modifier_utc)
             .build();
         assert!(capability.is_ok());
         let capability = capability.unwrap();
-        component.add_capability(capability);
-        let datas = component.get_full_stats();
+        component.add_capability(capability, db);
+        let stb = db.get_stat_box_mut();
+        let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(12, 0));
     }
 
     #[test]
     fn basic_component_datas() {
-        let mut component = make_test_component();
-        let datas = component.get_full_stats();
+        let mut map = SlotMap::new();
+        let real_id = map.insert(DataBox::new());
+        let component = make_test_component(real_id);
+        let datas = map
+            .get_mut(*component.get_data_box())
+            .unwrap()
+            .get_stat_box_mut()
+            .get_full_stats();
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(2, 0));
 
         let modifier = Modifier {
@@ -261,25 +204,26 @@ mod tests {
             required_flags: None,
             op: ModifierOp::Mul,
         };
-        component.add_modifier(modifier);
-        let datas = component.get_full_stats();
+        let modifier = ModifierWithEndUtc::new_no_end(modifier);
+        let stb = map
+            .get_mut(*component.get_data_box())
+            .expect("Id must exist")
+            .get_stat_box_mut();
+        stb.add_modifier(modifier);
+        let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(3, 0));
     }
 
     #[test]
     fn builder_validation() {
-        let component = Component::new()
-            .add_description("Test")
-            .add_base_value("health", xff!(1.0))
-            .build();
+        let mut map = SlotMap::new();
+        let real_id = map.insert(DataBox::new());
+        let component = Component::new(real_id).add_description("Test").build();
         assert!(component.is_err());
-        let component = Component::new()
-            .add_name("Test Component")
-            .add_base_value("health", xff!(1.0))
-            .build();
+        let component = Component::new(real_id).add_name("Test Component").build();
         assert!(component.is_err());
-        let component = Component::new()
+        let component = Component::new(SlotMapIndex::new_dummy())
             .add_name("Test Component")
             .add_description("Test")
             .build();

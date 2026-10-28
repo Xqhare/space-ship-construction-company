@@ -67,10 +67,14 @@ impl FlagBox {
     /// If the flag does exist, the RefCount is increased by 1.
     ///
     /// If a flag exists, it is considered to be `true`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `RefCount` overflows. (`u32::MAX + 1`)
     pub fn add_flag<S: Into<String>>(&mut self, flag: S) {
         let flag = flag.into();
-        if let Some(inner_flag) = self.flags.get_mut(&flag) {
-            *inner_flag += 1;
+        if let Some(flag_ref_count) = self.flags.get_mut(&flag) {
+            *flag_ref_count = *&flag_ref_count.strict_add(1);
         } else {
             self.flags.insert(flag, 1);
         }
@@ -85,10 +89,16 @@ impl FlagBox {
     /// If a flag exists, it is considered to be `true`.
     pub fn remove_flag<S: Into<String>>(&mut self, flag: S) {
         let flag = flag.into();
-        if let Some(inner_flag) = self.flags.get_mut(&flag) {
-            *inner_flag -= 1;
-            if *inner_flag == 0 {
+        if let Some(flag_ref_count) = self.flags.get_mut(&flag) {
+            if flag_ref_count == &0 {
+                debug_assert!(false, "RefCount should never be 0. Estúpido!");
+                // Safety drop for prod
                 self.flags.remove(&flag);
+            } else {
+                *flag_ref_count = *&flag_ref_count.saturating_sub(1);
+                if *flag_ref_count == 0 {
+                    self.flags.remove(&flag);
+                }
             }
         }
     }
@@ -105,5 +115,29 @@ impl FlagBox {
     /// If a flag exists, it is considered to be `true`.
     pub fn has_flag<S: Into<String>>(&self, flag: S) -> bool {
         self.flags.contains_key(&flag.into())
+    }
+    /// Merge another FlagBox into this one.
+    ///
+    /// This will not increase the RefCount of any flags.
+    /// If a flag is not present in `self`, but is present in `other`, it will be added to `self` with the RefCount found in `other`.
+    pub fn extend(&mut self, other: &FlagBox) {
+        for (flag, ref_count) in &other.flags {
+            if !self.flags.contains_key(flag) {
+                self.flags.insert(flag.to_string(), *ref_count);
+            }
+        }
+    }
+    /// Merge another FlagBox into this one.
+    ///
+    /// This will increase the RefCount of any flags in `self` if they are also present in `other`.
+    /// If a flag is not present in `self`, but is present in `other`, it will be added to `self` with the RefCount found in `other`.
+    pub fn extend_and_inc_ref(&mut self, other: &FlagBox) {
+        for (flag, ref_count) in &other.flags {
+            if let Some(inner_ref_count) = self.flags.get_mut(flag) {
+                *inner_ref_count += ref_count;
+            } else {
+                self.flags.insert(flag.to_string(), *ref_count);
+            }
+        }
     }
 }

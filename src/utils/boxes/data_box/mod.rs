@@ -65,26 +65,19 @@ impl DataBox {
     pub fn get_stat_box(&self) -> &StatBox {
         &self.stats
     }
-    /// Add a flag to the FlagBox
-    ///
-    /// If the flag already exists, nothing happens and the argument is dropped
-    ///
-    /// Flags may only exist once. This is enforced by the FlagBox
-    ///
-    /// If a flag exists, it is considered to be `true`.
-    pub fn add_flag<S: Into<String>>(&mut self, flag: S) {
-        self.flags.add_flag(flag);
+    /// Returns a mutable reference to the FlagBox
+    pub fn get_flag_box_mut(&mut self) -> &mut FlagBox {
+        &mut self.flags
     }
-    /// Remove a flag from the FlagBox
-    ///
-    /// If a flag exists, it is considered to be `true`.
-    pub fn remove_flag<S: Into<String>>(&mut self, flag: S) {
-        self.flags.remove_flag(flag);
+    /// Returns a reference to the FlagBox
+    pub fn get_flag_box(&self) -> &FlagBox {
+        &self.flags
     }
-    /// Check if the FlagBox contains a flag
+    /// Merge another DataBox into this one
     ///
-    /// If a flag exists, it is considered to be `true`.
-    pub fn has_flag<S: Into<String>>(&self, flag: S) -> bool {
-        self.flags.has_flag(flag)
+    /// For a detailed description of how this works, see [`StatBox::extend`] and [`FlagBox::extend`]
+    pub fn extend(&mut self, other: &DataBox) {
+        self.stats.extend(&other.stats);
+        self.flags.extend(&other.flags);
     }
 }

@@ -1,9 +1,11 @@
+use horae::Utc;
+
 use crate::{
     consts::flags::INTERNAL_NONE,
     error::{SSCCResult, new_capability_builder_error},
-    modules::modifier::Modifier,
+    modules::modifier::ModifierWithEndUtc,
     needs_home::BaseValuePair,
-    utils::boxes::flag_box::Flag,
+    utils::boxes::data_box::flag_box::Flag,
 };
 
 /// Capability of a component
@@ -14,8 +16,7 @@ pub struct Capability {
     description: String,
     flag: Flag,
     impacted_base_value_pair: Option<BaseValuePair>,
-    // TODO: Consider timed modifiers
-    inherent_modifiers: Vec<Modifier>,
+    inherent_modifiers: Vec<ModifierWithEndUtc>,
 }
 
 impl Capability {
@@ -42,7 +43,7 @@ impl Capability {
     fn add_impacted_base_value_pair(&mut self, base_value_pair: BaseValuePair) {
         self.impacted_base_value_pair = Some(base_value_pair);
     }
-    fn add_inherent_modifier(&mut self, modifier: Modifier) {
+    fn add_inherent_modifier(&mut self, modifier: ModifierWithEndUtc) {
         self.inherent_modifiers.push(modifier);
     }
     pub fn has_flag(&self, flag: &Flag) -> bool {
@@ -60,9 +61,23 @@ impl Capability {
     pub fn impacted_base_value_pair(&self) -> &Option<BaseValuePair> {
         &self.impacted_base_value_pair
     }
-    pub fn inherent_modifiers(&self) -> &Vec<Modifier> {
+    pub fn inherent_modifiers(&self) -> &Vec<ModifierWithEndUtc> {
         &self.inherent_modifiers
     }
+    pub fn update_inherent_modifiers(&mut self, now_utc: &Utc) {
+        self.inherent_modifiers = drop_modifiers_past_date(&self.inherent_modifiers, now_utc);
+    }
+}
+
+fn drop_modifiers_past_date(
+    modifiers: &Vec<ModifierWithEndUtc>,
+    now_utc: &Utc,
+) -> Vec<ModifierWithEndUtc> {
+    modifiers
+        .iter()
+        .filter(|modifier| modifier.end_utc > Some(*now_utc))
+        .cloned()
+        .collect()
 }
 
 pub struct CapabilityBuilder {
@@ -97,7 +112,7 @@ impl CapabilityBuilder {
         self.inner.add_impacted_base_value_pair(base_value_pair);
         self
     }
-    pub fn add_inherent_modifier(mut self, modifier: Modifier) -> Self {
+    pub fn add_inherent_modifier(mut self, modifier: ModifierWithEndUtc) -> Self {
         self.inner.add_inherent_modifier(modifier);
         self
     }

@@ -1,11 +1,7 @@
-use aequa::XffValue;
-
 use crate::{
     error::{SSCCResult, new_component_builder_error},
-    modules::{
-        component::{Capability, Component},
-        modifier::Modifier,
-    },
+    modules::component::{Capability, Component},
+    utils::boxes::data_box::DataBox,
 };
 #[non_exhaustive]
 #[derive(Debug, Clone)]
@@ -25,20 +21,12 @@ impl ComponentBuilder {
         self.inner.description = description.into();
         self
     }
-    pub fn add_modifier(mut self, modifier: Modifier) -> Self {
-        self.inner.add_modifier(modifier);
+    pub fn add_component(mut self, component: Component, data_box_ref: &mut DataBox) -> Self {
+        self.inner.add_component(component, data_box_ref);
         self
     }
-    pub fn add_component(mut self, component: Component) -> Self {
-        self.inner.add_component(component);
-        self
-    }
-    pub fn add_base_value<S: Into<String>>(mut self, key: S, value: XffValue) -> Self {
-        self.inner.add_base_value(key, value);
-        self
-    }
-    pub fn add_capability(mut self, capability: Capability) -> Self {
-        self.inner.add_capability(capability);
+    pub fn add_capability(mut self, capability: Capability, data_box_ref: &mut DataBox) -> Self {
+        self.inner.add_capability(capability, data_box_ref);
         self
     }
     pub fn build(self) -> SSCCResult<Component> {
@@ -50,8 +38,8 @@ impl ComponentBuilder {
         if self.inner.description.is_empty() {
             errs_encountered.push("Description cannot be empty");
         }
-        if !self.inner.data_box.has_base_values() {
-            errs_encountered.push("No base values found. At least one is required");
+        if self.inner.data_box_id.is_dummy() {
+            errs_encountered.push("Data box slot id cannot be a dummy");
         }
 
         if errs_encountered.len() == 0 {
@@ -66,28 +54,29 @@ impl ComponentBuilder {
     }
 }
 
-#[test]
-fn basics_component_builder() {
-    use aequa::xff;
-    let component = Component::new()
-        .add_name("test")
-        .add_description("test")
-        .add_base_value("weight", xff!(1.0))
-        .build();
-    assert!(component.is_ok());
-    let component = Component::new()
-        .add_name("test")
-        .add_description("test")
-        .build();
-    assert!(component.is_err());
-    let component = Component::new()
-        .add_name("test")
-        .add_base_value("weight", xff!(1.0))
-        .build();
-    assert!(component.is_err());
-    let component = Component::new()
-        .add_description("test")
-        .add_base_value("weight", xff!(1.0))
-        .build();
-    assert!(component.is_err());
+#[cfg(test)]
+mod tests {
+    use athena::slot_map::{SlotMap, SlotMapIndex};
+
+    use crate::modules::component::Component;
+    #[test]
+    fn basics_component_builder() {
+        let mut slot = SlotMap::new();
+        let real_id = slot.insert("test");
+        let dummy_id = SlotMapIndex::new_dummy();
+        let component = Component::new(real_id)
+            .add_name("test")
+            .add_description("test desc")
+            .build();
+        assert!(component.is_ok());
+        let component = Component::new(dummy_id)
+            .add_name("test")
+            .add_description("test desc")
+            .build();
+        assert!(component.is_err());
+        let component = Component::new(real_id).add_name("test").build();
+        assert!(component.is_err());
+        let component = Component::new(real_id).add_description("test desc").build();
+        assert!(component.is_err());
+    }
 }

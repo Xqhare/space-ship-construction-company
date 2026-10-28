@@ -30,6 +30,12 @@ impl ModifierWithEndUtc {
         };
         ModifierWithEndUtc { modifier, end_utc }
     }
+    pub fn new_no_end(modifier: Modifier) -> ModifierWithEndUtc {
+        ModifierWithEndUtc {
+            modifier,
+            end_utc: None,
+        }
+    }
 }
 
 impl XffSerde for ModifierWithEndUtc {
