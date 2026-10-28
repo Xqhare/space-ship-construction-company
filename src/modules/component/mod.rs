@@ -164,12 +164,12 @@ mod tests {
         stb.add_modifier(flat_modifier);
         let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
-        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(6, 0));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(44, 0));
         component.add_component(make_test_component(real_id), db);
         let stb = db.get_stat_box_mut();
         let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
-        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(9, 0));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(44, 0));
         let capability = Capability::new()
             .add_name("Test Capability")
             .add_description("Test")
@@ -182,13 +182,16 @@ mod tests {
         let stb = db.get_stat_box_mut();
         let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
-        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(12, 0));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(84, 0));
     }
 
     #[test]
     fn basic_component_datas() {
         let mut map = SlotMap::new();
-        let real_id = map.insert(DataBox::new());
+        let mut db = DataBox::new();
+        db.get_stat_box_mut()
+            .add_base_value("health", &HpFloat::new(2, 0));
+        let real_id = map.insert(db);
         let component = make_test_component(real_id);
         let datas = map
             .get_mut(*component.get_data_box())
@@ -213,7 +216,7 @@ mod tests {
         stb.add_modifier(modifier);
         let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
-        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(3, 0));
+        assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(1, 0));
     }
 
     #[test]
