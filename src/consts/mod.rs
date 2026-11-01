@@ -1,5 +1,6 @@
 pub mod base_values;
 pub mod flags;
+pub mod science;
 pub mod durations {
     use std::time::Duration;
 

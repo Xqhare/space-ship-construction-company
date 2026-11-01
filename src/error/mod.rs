@@ -11,8 +11,13 @@ pub enum SSCCError {
     CapabilityBuilder(String),
     ShipClassBuilder(String),
     Startup(String),
+    Generation(String),
     XffSerde(String),
     Io(std::io::Error),
+}
+
+pub fn new_generation_error(msg: &str) -> NemesisError {
+    SSCCError::Generation(msg.to_string()).into()
 }
 
 pub fn new_xff_serde_error(msg: &str) -> NemesisError {
@@ -60,6 +65,7 @@ impl std::error::Error for SSCCError {
             SSCCError::CapabilityBuilder(msg) => msg,
             SSCCError::ShipClassBuilder(msg) => msg,
             SSCCError::XffSerde(msg) => msg,
+            SSCCError::Generation(msg) => msg,
             SSCCError::Startup(msg) => msg,
             SSCCError::Io(_) => "IO Error",
         }
@@ -76,6 +82,7 @@ impl From<SSCCError> for NemesisError {
             SSCCError::ComponentBuilder(ref msg) => (msg.clone(), "ComponentBuilder"),
             SSCCError::CapabilityBuilder(ref msg) => (msg.clone(), "CapabilityBuilder"),
             SSCCError::ShipClassBuilder(ref msg) => (msg.clone(), "ShipClassBuilder"),
+            SSCCError::Generation(ref msg) => (msg.clone(), "Generation"),
             SSCCError::Startup(ref msg) => (msg.clone(), "Startup"),
             SSCCError::Io(ref err) => (err.to_string(), "std::io::Error"),
         };
@@ -95,6 +102,7 @@ impl fmt::Display for SSCCError {
             SSCCError::ComponentBuilder(msg) => write!(f, "{}", msg),
             SSCCError::CapabilityBuilder(msg) => write!(f, "{}", msg),
             SSCCError::ShipClassBuilder(msg) => write!(f, "{}", msg),
+            SSCCError::Generation(msg) => write!(f, "{}", msg),
             SSCCError::Startup(msg) => write!(f, "{}", msg),
             SSCCError::Io(err) => write!(f, "{}", err),
         }

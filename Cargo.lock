@@ -39,8 +39,8 @@ dependencies = [
 
 [[package]]
 name = "ilmarinen"
-version = "1.2.1"
-source = "git+https://github.com/xqhare/ilmarinen#70759c78872c1e169b4ebb703d1b663f4efabc32"
+version = "1.2.2"
+source = "git+https://github.com/xqhare/ilmarinen#37931c83f624a4d14583c6a3b74bf8cbd15e8edd"
 dependencies = [
  "fortuna",
  "mawu",
