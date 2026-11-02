@@ -1,6 +1,12 @@
 pub mod base_values;
+pub mod characters;
 pub mod flags;
 pub mod science;
+
+pub type ConstBVPair<'a> = (&'a str, Option<f32>);
+
+pub const EMPTY_BV_PAIR: ConstBVPair = ("", None);
+
 pub mod durations {
     use std::time::Duration;
 

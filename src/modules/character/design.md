@@ -76,6 +76,34 @@ final_points_cost_of_level = (1 + (level / LEVEL_AMOUNT)) * POINT_COST
 
 Meaning: The very first level has the cost of COST, each additional level has a slightly higher cost with the last level costing 2 * COST.
 
+## IQ
+
+Each character has an IQ (Intelligence Quotient).
+It is generated upon character init.
+
+It follows (As stolen from: https://en.wikipedia.org/wiki/IQ_classification on 2026-11-01; Terman & Merrill 1960, p. 18):
+
+1. 0.03% - 160-169
+2. 0.2% - 150-159
+3. 1.1% - 140-149
+4. 3.1% - 130-139
+5. 8.2% - 120-129
+6. 18.1% - 110-119
+7. 23.5% - 100-109
+8. 23.0% - 90-99
+9. 14.5% - 80-89
+10. 5.6% - 70-79
+11. 2.0% - 60-69
+12. 0.4% - 50-59
+13. 0.2% - 40-49
+14. 0.03% - 30-39
+
+## Memories
+
+At some point, maybe, I would like a simple memory system.
+
+Timed modifiers kind of are like memories, but I want something more complex.
+
 ## Health, Death and Retirement
 
 Each character has a health, mental health and pain stat.
@@ -103,6 +131,10 @@ These can happen while working or not.
 #### Mental Health
 
 Functions largely like pain.
+
+The values are flipped, 100 is good mental health, 0 is no mental health.
+
+If the value reaches 0 the character will commit suicide (except for some traits).
 
 ### Retirement
 
