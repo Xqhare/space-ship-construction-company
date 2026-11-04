@@ -12,3 +12,5 @@ pub const HEALTH: ConstBVPair = ("health", None);
 pub const EMPLOYEES: ConstBVPair = ("employees", None);
 pub const MONEY: ConstBVPair = ("money", None);
 pub const RANGE: ConstBVPair = ("range", None);
+
+pub const SOC_BONUS_ALL: ConstBVPair = ("soc_bonus_all", None);

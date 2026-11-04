@@ -71,7 +71,7 @@ It is a fixed value, generated at character init. It takes into account traits a
 
 ### Option 2
 
-Just as with resarch fields.
+Just as with research fields.
 
 The base affinity value is generated as in option 1.
 
@@ -165,18 +165,135 @@ It follows (As stolen from: https://en.wikipedia.org/wiki/IQ_classification on 2
 
 1. 0.03% - 160-169
 2. 0.2% - 150-159
-3. 1.1% - 140-149
-4. 3.1% - 130-139
-5. 8.2% - 120-129
-6. 18.1% - 110-119
-7. 23.5% - 100-109
-8. 23.0% - 90-99
-9. 14.5% - 80-89
-10. 5.6% - 70-79
-11. 2.0% - 60-69
-12. 0.4% - 50-59
+3. 1.1% - 140-149 - Genius
+4. 3.1% - 130-139 - Astute
+5. 8.2% - 120-129 - Shrewd
+6. 18.1% - 110-119 - Smart
+7. 23.5% - 100-109 - Bright
+8. 23.0% - 90-99 - Dim
+9. 14.5% - 80-89 - Dull
+10. 5.6% - 70-79 - Dense
+11. 2.0% - 60-69 - Dimwit
+12. 0.4% - 50-59 - Simpleton
 13. 0.2% - 40-49
 14. 0.03% - 30-39
+
+To simplify further:
+
+```
+// Instead of a random range, a random bool would be enough
+// I could also extend my RngAPI to support weighted randoms.
+
+// 50%
+if 0 == random_range(0, 1) {
+    if 0 == random_range(0, 1) {
+        // 25%
+        BRIGHT (100-109)
+    } else {
+        // 25%
+        DIM (90-99)
+    }
+// 50%
+} else {
+    // 25%
+    if 0 == random_range(0, 1) {
+        if 0 == random_range(0, 1) {
+            // 12.5%
+            SMART (110-119)
+        } else {
+            // 12.5%
+            DULL (80-89)
+        }
+    // 25%
+    } else {
+        // 12.5%
+        if 0 == random_range(0, 1) {
+            // 6.25%
+            if 0 == random_range(0, 1) {
+                SHREWD (120-129)
+            } else {
+            // 6.25%
+                DENSE (70-79)
+            }
+        // 12.5%
+        } else {
+            // 6.25%
+            if 0 == random_range(0, 1) {
+                // 3.125%
+                if 0 == random_range(0, 1) {
+                    ASTUTE (130-139)
+                } else {
+                    DIMWIT (60-69)
+                }
+                // 3.125%
+            // 6.25%
+            } else {
+                // Option 1; With a lot larger percantage of the pop having these traits
+                if 0 == random_range(0, 1) {
+                    // 3.125%
+                    GENIUS (140-149)
+                } else {
+                    // 3.125%
+                    SIMPLETON (40-49)
+                }
+                // Option 2; More realistic
+                // 3.125%
+                if 0 == random_range(0, 1) {
+                    if 0 == random_range(0, 1) {
+                        // 1.5625%
+                        BRIGHT (100-109)
+                    } else {
+                        // 1.5625%
+                        DIMM (90-99)
+                    }
+                // 3.125%
+                } else {
+                    if 0 == random_range(0, 1) {
+                        // 1.5625%
+                        GENIUS (140-149)
+                    } else {
+                        // 1.5625%
+                        SIMPLETON (40-49)
+                    }
+                }
+            }
+        }
+    }
+}
+
+```
+
+Final numbers (Option 2 looks to be the best fit):
+
+1. Genius, 1.5625% (Opt2) | 3.125% (Opt1) [1.1]
+2. Astute, 3.125% [3.1]
+3. Shrewd, 6.25% [8.2]
+4. Smart, 12.5% [18.1]
+5. Bright, 25% (Opt1) | 25% + 1.5625% (Opt2) [23.5]
+6. Dim, 25% (Opt1) | 25% + 1.5625% (Opt2) [23.0]
+7. Dull, 12.5% [14.5]
+8. Dense, 6.25% [5.6]
+9. Dimwit, 3.125% [2.0]
+10. Simpleton, 1.5625% (Opt2) | 3.125% (Opt1) [0.4]
+
+In essence this still is Terman & Merril, but normalised and capped.
+The median of 90-110 is changed the most from their data, but still within 5%.
+
+## Looks
+
+Like IQ, looks are generated at char init.
+There are 8 levels:
+
+- Aberrant; 3.125%
+- Hideous; 6.25%
+- Unsightly; 12.5%
+- Appealing; 25%
+- Pretty; 25%
+- Attractive; 12.5%
+- Beautiful; 6.25%
+- Gorgeous; 3.125%
+
+They will provide a modifier for all social interactions of that character.
 
 ## Memories
 
@@ -190,7 +307,7 @@ Each character has a health, mental health and pain stat.
 
 #### Pain
 
-Ranging from 0 (No pain) to 100 (Maximum pain).
+Ranging from 0 (No pain) to 1000 (Maximum pain).
 
 Should the pain raise above a threshold (probably player defined and nations state capped) the character will not work at all. Up until that point at a reduced rate.
 
@@ -212,7 +329,7 @@ These can happen while working or not.
 
 Functions largely like pain.
 
-The values are flipped, 100 is good mental health, 0 is no mental health.
+The values work as with health, 1000 is good mental health, 0 is no mental health.
 
 If the value reaches 0 the character will commit suicide (except for some traits).
 

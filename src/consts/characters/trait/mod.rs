@@ -1,6 +1,6 @@
 use crate::consts::{ConstBVPair, EMPTY_BV_PAIR};
 
-pub mod registry;
+pub mod registries;
 
 /// Maximum amount of specific skills a character trait can impact
 /// Limit is chosen arbitrarily but should be kept low in any case.
