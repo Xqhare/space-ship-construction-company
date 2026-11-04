@@ -4,10 +4,11 @@ I plan on having characters drive as much of the game as possible.
 
 ```rust
 
-struct {
+struct Character {
     name: Name,
     stats: DataBoxId,
     birthday: Utc,
+    teams: Vec<TeamBoxSlotId>,
     traits: Vec<Trait>,
     skills: Vec<Skill>
 }
@@ -30,10 +31,12 @@ const POINT_COST_HIGH_LEVEL: u16 = 1024;
 /// Industry Legend -> Famous Industry Legend
 const POINT_COST_ULTRA_LEVEL: u16 = 4096;
 
-const LEVEL_AMOUNT_LOW: u8 = 10;
-const LEVEL_AMOUNT_MEDIUM: u8 = 10;
-const LEVEL_AMOUNT_HIGH: u8 = 10;
-const LEVEL_AMOUNT_ULTRA: u8 = 3;
+// Levels range form 0..=LEVEL_AMOUNT
+// The level number would always be converted into the corresponding name before displaying it for the player
+const LEVEL_AMOUNT_LOW: u8 = 9;
+const LEVEL_AMOUNT_MEDIUM: u8 = 9;
+const LEVEL_AMOUNT_HIGH: u8 = 9;
+const LEVEL_AMOUNT_ULTRA: u8 = 2;
 
 /// All u8 must be <= LEVEL_AMOUNT
 enum Level {
@@ -58,6 +61,59 @@ stuct Name {
 
 ```
 
+## Affinity
+
+### Option 1
+
+Represent how natural a character picks up a specific skill.
+
+It is a fixed value, generated at character init. It takes into account traits and some character stats like IQ.
+
+### Option 2
+
+Just as with resarch fields.
+
+The base affinity value is generated as in option 1.
+
+It grows whenever the skill is utilised in any way.
+
+It decreases over time continuously.
+Maybe the higher the level the faster it decreases? Or statically, influenced by traits?
+
+## CharacterSlotMap
+
+Characters will be stored in a centralised SlotMap.
+
+## Getting Characters
+
+There will be a pool of 1000 characters that are available for use. (Think possible employees).
+
+This list will be filled with a generalised character creation call that will return a Character to be inserted in the SlotMap.
+
+Characters will be removed from the pool when they are hired or until some duration of time has passed.
+
+The higher the reputation / how good of an employer the company is, more skilled characters are added and characters will stay in the pool longer.
+
+## Teams
+
+Each character can be part of one or more teams.
+Teams are stored centrally in a SlotMap, each character will hold the ID of the teams they are part of.
+
+Each team will also have a list of CharacterSlotMapId's of the characters in it.
+
+A character can be part of several teams, according to its kind.
+
+Some team kinds (e.g. Research team) are limited to one per character.
+
+A character can be part of several management teams (e.g. Research Team lead & part of the R&D division management level).
+
+### Future Refactor
+
+At some point I think the team field could also be used as a local cache.
+
+I could store a simplified list of what team kinds the char is already a part of to simplify the assignments.
+
+
 ## Maximum Skill
 
 I expect the vast majority of characters and their skills to not exceed the MEDIUM level.
@@ -75,6 +131,30 @@ final_points_cost_of_level = (1 + (level / LEVEL_AMOUNT)) * POINT_COST
 ```
 
 Meaning: The very first level has the cost of COST, each additional level has a slightly higher cost with the last level costing 2 * COST.
+
+## Loosing Skill
+
+While skill atrophy is somewhat real and learned knowledge does get outdated, I remain conflicted on how to handle it in game.
+
+It boils down to a simple choice really:
+
+1. Skills can be lost
+2. Skills cannot be lost
+
+Pros for 1.
+
+- Realistic
+- Simulation depth
+- Player choice / agency (keep a character part of some teams just so they still use their skills / Having to decide if a good researcher & manager should focus on one at the expense of the other) 
+
+Pros for 2.
+
+- Easier for the player
+- Simpler for the game
+
+### A middle ground?
+
+Let the skill level be permanent, but the points in the current level move towards 0.
 
 ## IQ
 

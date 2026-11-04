@@ -10,6 +10,8 @@ use crate::consts::{
     },
 };
 
+pub type CharacterTraitRegistryId = u8;
+
 static TRAIT_REGISTRY: [CharacterTrait; 108] = [
     // Ck3 Tratis
     CharacterTrait::new("Ambitious", [], [ALWAYS_PROVIDES_ALL]),

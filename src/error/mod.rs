@@ -13,7 +13,12 @@ pub enum SSCCError {
     Startup(String),
     Generation(String),
     XffSerde(String),
+    Character(String),
     Io(std::io::Error),
+}
+
+pub fn new_character_error(msg: &str) -> NemesisError {
+    SSCCError::Character(msg.to_string()).into()
 }
 
 pub fn new_generation_error(msg: &str) -> NemesisError {
@@ -67,6 +72,7 @@ impl std::error::Error for SSCCError {
             SSCCError::XffSerde(msg) => msg,
             SSCCError::Generation(msg) => msg,
             SSCCError::Startup(msg) => msg,
+            SSCCError::Character(msg) => msg,
             SSCCError::Io(_) => "IO Error",
         }
     }
@@ -84,6 +90,7 @@ impl From<SSCCError> for NemesisError {
             SSCCError::ShipClassBuilder(ref msg) => (msg.clone(), "ShipClassBuilder"),
             SSCCError::Generation(ref msg) => (msg.clone(), "Generation"),
             SSCCError::Startup(ref msg) => (msg.clone(), "Startup"),
+            SSCCError::Character(ref msg) => (msg.clone(), "Character"),
             SSCCError::Io(ref err) => (err.to_string(), "std::io::Error"),
         };
         let source = format!("SSCC Error raised in: '{}'", source);
@@ -104,6 +111,7 @@ impl fmt::Display for SSCCError {
             SSCCError::ShipClassBuilder(msg) => write!(f, "{}", msg),
             SSCCError::Generation(msg) => write!(f, "{}", msg),
             SSCCError::Startup(msg) => write!(f, "{}", msg),
+            SSCCError::Character(msg) => write!(f, "{}", msg),
             SSCCError::Io(err) => write!(f, "{}", err),
         }
     }

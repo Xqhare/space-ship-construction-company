@@ -10,8 +10,8 @@ use crate::{
 
 /// Generalised storage of data for entities
 pub struct DataBox {
-    stats: StatBox,
-    flags: FlagBox,
+    pub stats: StatBox,
+    pub flags: FlagBox,
 }
 
 impl XffSerde for DataBox {
@@ -56,22 +56,6 @@ impl DataBox {
     pub fn is_tracking<S: Into<String>>(&self, name: S) -> bool {
         let name = name.into();
         self.flags.has_flag(&name) || self.stats.is_tracking(name)
-    }
-    /// Returns a mutable reference to the StatBox
-    pub fn get_stat_box_mut(&mut self) -> &mut StatBox {
-        &mut self.stats
-    }
-    /// Returns a reference to the StatBox
-    pub fn get_stat_box(&self) -> &StatBox {
-        &self.stats
-    }
-    /// Returns a mutable reference to the FlagBox
-    pub fn get_flag_box_mut(&mut self) -> &mut FlagBox {
-        &mut self.flags
-    }
-    /// Returns a reference to the FlagBox
-    pub fn get_flag_box(&self) -> &FlagBox {
-        &self.flags
     }
     /// Merge another DataBox into this one
     ///

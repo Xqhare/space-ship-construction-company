@@ -1,3 +1,11 @@
+//! Constants for base values.
+//!
+//! Each base value is a tuple of a name and an optional value, `BaseValueName` and `BaseValueValue` respectively.
+//! `BaseValueValue` is a `Option<f32>`.
+//!
+//! For Values without a value (None), there is no default value that makes sense.
+//! A value will need to be calculated for it.
+
 use crate::consts::ConstBVPair;
 
 pub const ALL_CHAR_BASES: [ConstBVPair; 13] = [
