@@ -5,9 +5,13 @@ use athena::slot_map::{SlotMap, SlotMapIndex};
 
 use crate::{
     error::{SSCCResult, new_startup_error},
-    modules::event::{
-        event_queue::{EventQueue, queue_item::QueueItem},
-        event_store::EventStore,
+    modules::{
+        character::Character,
+        event::{
+            event_queue::{EventQueue, queue_item::QueueItem},
+            event_store::EventStore,
+        },
+        team::Team,
     },
     utils::{
         Utils,
@@ -15,12 +19,12 @@ use crate::{
     },
 };
 
-pub type DataBoxSlotId = SlotMapIndex;
-
 /// The Space Ship Construction Company 'Runtime' object
 pub struct Runtime {
     pub utils: Utils,
     pub data_box_slot_map: SlotMap<DataBox>,
+    pub team_slot_map: SlotMap<Team>,
+    pub character_slot_map: SlotMap<Character>,
     pub super_box: SuperBox,
     pub event_queue: EventQueue,
     pub event_store: EventStore,

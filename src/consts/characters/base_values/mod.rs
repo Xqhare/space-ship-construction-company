@@ -8,7 +8,7 @@
 
 use crate::consts::ConstBVPair;
 
-pub const ALL_CHAR_BASES: [ConstBVPair; 11] = [
+pub const ALL_CHAR_BASES: [ConstBVPair; 12] = [
     HEALTH,
     MENTAL_HEALTH,
     PAIN,
@@ -20,6 +20,7 @@ pub const ALL_CHAR_BASES: [ConstBVPair; 11] = [
     FULFILMENT,
     COMFORT,
     STRESS,
+    STRENGTH,
 ];
 
 pub const HEALTH: ConstBVPair = ("health", Some(1000.0));
@@ -33,4 +34,4 @@ pub const SOCIABILITY: ConstBVPair = ("sociability", None);
 pub const FULFILMENT: ConstBVPair = ("fulfilment", None);
 pub const COMFORT: ConstBVPair = ("comfort", None);
 pub const STRESS: ConstBVPair = ("stress", None);
-pub const STRENGHT: ConstBVPair = ("strength", None);
+pub const STRENGTH: ConstBVPair = ("strength", None);

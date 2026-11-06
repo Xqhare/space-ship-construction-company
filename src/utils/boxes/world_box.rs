@@ -7,8 +7,7 @@ use nemesis::NemesisResultExt;
 
 use crate::{
     error::{SSCCResult, new_xff_serde_error},
-    runtime::DataBoxSlotId,
-    utils::{seed_giver, start_date},
+    utils::{boxes::DataBoxSlotId, seed_giver, start_date},
 };
 
 #[derive(Debug)]

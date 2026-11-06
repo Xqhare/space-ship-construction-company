@@ -6,7 +6,10 @@ use horae::Utc;
 use tyche::RngApi;
 
 use crate::{
-    consts::characters::r#trait::{CharacterTrait, registry::CharacterTraitRegistryId},
+    consts::characters::traits::{
+        CharacterTrait,
+        registries::{CharacterTraitRegistryId, get_trait_from_registry},
+    },
     error::{SSCCResult, new_character_error, new_generation_error},
     modules::character::name::CharacterName,
     runtime::DataBoxSlotId,
@@ -23,16 +26,20 @@ pub struct Character {
     /// The character's data box
     data_box: DataBoxSlotId,
     pub birthday: Utc,
+    // TODO: Retirement System with national retirement age, company benefits etc. At some point -
+    // Fixed date should work for a good while
+    pub retirement: Utc,
     pub teams: Vec<TeamBoxSlotId>,
     /// The character's traits.
     /// For lookup purposes.
     /// All traits must be unique.
-    traits: Vec<CharacterTraitRegistryId>,
+    traits: Vec<&'static CharacterTrait>,
     skill: Vec<CharacterSkill>,
 }
 
 impl Character {
     pub fn new_random(utils: &mut Utils, final_company_rep: HpFloat) -> SSCCResult<Character> {
+        // Build a valid call to `self::new_custom`
         todo!()
     }
     /// Generates a new random character with one 'ultra' level skill.
@@ -40,12 +47,13 @@ impl Character {
         utils: &mut Utils,
         final_company_rep: HpFloat,
     ) -> SSCCResult<Character> {
+        // Build a valid call to `self::new_custom`
         todo!()
     }
     pub fn new_custom(
         utils: &mut Utils,
         final_company_rep: HpFloat,
-        traits: Vec<CharacterTraitRegistryId>,
+        traits: Vec<CharacterTrait>,
         skills: Vec<CharacterSkillRegistryId>,
         birth_day: Utc,
         name: Option<CharacterName>,
@@ -78,14 +86,11 @@ impl Character {
                 .add_ctx(format!("DataBox {:?} no longer exists", self.data_box)))
         }
     }
-    pub fn get_full_stats(
-        &mut self,
-        data_box_slot_map: &mut SlotMap<DataBox>,
-    ) -> SSCCResult<Object> {
-        if let Some(data_box) = data_box_slot_map.get_mut(self.data_box) {
+    /// Remember to call `Character::tick_skill_use` if applicable!
+    pub fn get_full_stats(&mut self, data_box_slot_map: &SlotMap<DataBox>) -> SSCCResult<Object> {
+        if let Some(data_box) = data_box_slot_map.get(self.data_box) {
             let mut stats = data_box.stats.get_full_stats();
-            for skill in self.skill.iter_mut() {
-                // TODO: Skill advancement through use
+            for skill in self.skill.iter() {
                 // TODO: Apply skill to relevant stats
             }
             Ok(stats)
@@ -94,10 +99,33 @@ impl Character {
                 .add_ctx(format!("DataBox {:?} no longer exists", self.data_box)))
         }
     }
-    pub fn add_trait(&mut self, trait_id: CharacterTraitRegistryId) -> SSCCResult<()> {
+    pub fn tick_skill_use(&mut self, data_box_slot_map: &mut SlotMap<DataBox>) -> SSCCResult<()> {
+        if let Some(data_box) = data_box_slot_map.get_mut(self.data_box) {
+            let mut stats = data_box.stats.get_full_stats();
+            for skill in self.skill.iter_mut() {
+                // TODO: Skill advancement through use
+            }
+            Ok(())
+        } else {
+            Err(new_character_error("DataBox no longer exists")
+                .add_ctx(format!("DataBox {:?} no longer exists", self.data_box)))
+        }
+    }
+    pub fn add_trait_via_id(&mut self, trait_id: CharacterTraitRegistryId) -> SSCCResult<()> {
+        self.add_trait(
+            get_trait_from_registry(trait_id)
+                .ok_or(new_character_error("Can't add trait, ID invalid"))?,
+        )
+    }
+    pub fn add_trait(&mut self, character_trait: &'static CharacterTrait) -> SSCCResult<()> {
         // Add trait to DataBox.
         // How exactly the traits values interact with the character's base values is yet
         // to be determined, but will be defined in this function
+        //
+        // Issue: This will turn into one massive match handling every trait and how
+        // exactly the base_value_value held is applied.
+        //
+        self.traits.push(character_trait);
         todo!()
     }
     pub fn add_skill(&mut self, skill_id: CharacterSkillRegistryId) -> SSCCResult<()> {

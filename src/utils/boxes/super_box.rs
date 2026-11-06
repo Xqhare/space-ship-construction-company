@@ -1,6 +1,9 @@
 use aequa::{Object, XffSerde, XffValue, xff};
 
-use crate::{error::new_startup_error, runtime::DataBoxSlotId, utils::boxes::world_box::WorldBox};
+use crate::{
+    error::new_startup_error,
+    utils::boxes::{DataBoxSlotId, world_box::WorldBox},
+};
 #[non_exhaustive]
 pub struct SuperBox {
     player_data_box_id: DataBoxSlotId,

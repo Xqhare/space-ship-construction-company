@@ -11,6 +11,12 @@ pub enum ModifierType {
     Percentage,
 }
 
+impl Default for ModifierType {
+    fn default() -> Self {
+        ModifierType::Percentage
+    }
+}
+
 impl XffSerde for ModifierType {
     fn to_xff(&self) -> XffValue {
         xff!(self.to_string())

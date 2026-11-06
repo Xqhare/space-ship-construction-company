@@ -1,0 +1,42 @@
+use crate::consts::characters::{
+    flags::{
+        ONLY_PROVIDES_NEEDED,
+        suicide::{SUICIDE_NEVER, SUICIDE_NEVER_OFF_SITE, SUICIDE_NEVER_ON_SITE},
+    },
+    traits::CharacterTrait,
+};
+
+pub static TRAIT_SOCIAL_REGISTRY: [CharacterTrait; 28] = [
+    CharacterTrait::new("Booming Voice", [], []),
+    CharacterTrait::new(
+        "Machiavellian",
+        [],
+        [SUICIDE_NEVER_OFF_SITE, ONLY_PROVIDES_NEEDED],
+    ),
+    CharacterTrait::new("Silver Tongue", [], []),
+    CharacterTrait::new("Conciliatory", [], []),
+    CharacterTrait::new("Timid", [], []),
+    CharacterTrait::new("Groomed", [], []),
+    CharacterTrait::new("Fussy", [], []),
+    CharacterTrait::new("Affectionate", [], []),
+    CharacterTrait::new("Wrathful", [], []),
+    CharacterTrait::new("Vengeful", [], []),
+    CharacterTrait::new("Trusting", [], []),
+    CharacterTrait::new("Shy", [], [SUICIDE_NEVER_ON_SITE]),
+    CharacterTrait::new("Sadistic", [], []),
+    CharacterTrait::new("Honest", [], []),
+    CharacterTrait::new("Gregarious", [], []),
+    CharacterTrait::new("Generous", [], []),
+    CharacterTrait::new("Forgiving", [], []),
+    CharacterTrait::new("Deceitful", [], []),
+    CharacterTrait::new("Compassionate", [], [SUICIDE_NEVER]),
+    CharacterTrait::new("Charming", [], []),
+    CharacterTrait::new("Bossy", [], []),
+    CharacterTrait::new("Callous", [], []),
+    CharacterTrait::new("Greedy", [], []),
+    CharacterTrait::new("Charitable", [], []),
+    CharacterTrait::new("Wroth", [], []),
+    CharacterTrait::new("Kind", [], []),
+    CharacterTrait::new("Arrogant", [], []),
+    CharacterTrait::new("Humble", [], []),
+];

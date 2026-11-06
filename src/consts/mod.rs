@@ -3,7 +3,7 @@ pub mod characters;
 pub mod flags;
 pub mod science;
 
-pub type ConstBVPair<'a> = (&'a str, Option<f32>);
+pub type ConstBVPair = (&'static str, Option<f32>);
 
 pub const EMPTY_BV_PAIR: ConstBVPair = ("", None);
 

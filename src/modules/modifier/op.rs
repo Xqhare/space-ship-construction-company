@@ -2,7 +2,7 @@ use aequa::{XffSerde, XffValue, xff};
 use nemesis::{NemesisError, NemesisResultExt};
 
 use crate::error::{new_startup_error, new_xff_serde_error};
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ModifierOp {
     Add,
     Sub,
@@ -10,6 +10,12 @@ pub enum ModifierOp {
     Div,
     Set,
     Lim,
+}
+
+impl Default for ModifierOp {
+    fn default() -> Self {
+        ModifierOp::Add
+    }
 }
 
 impl XffSerde for ModifierOp {
