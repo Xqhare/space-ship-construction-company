@@ -4,12 +4,12 @@ use crate::consts::characters::{
 };
 
 pub static TRAIT_WORK_ETHIC_REGISTRY: [CharacterTrait; 8] = [
-    CharacterTrait::new("Ambitious", [], [ALWAYS_PROVIDES_ALL]),
-    CharacterTrait::new("Content", [], [SUICIDE_NEVER]),
-    CharacterTrait::new("Diligent", [], [ALWAYS_PROVIDES_ALL]),
-    CharacterTrait::new("Fickle", [], []),
-    CharacterTrait::new("Impatient", [], []),
-    CharacterTrait::new("Lazy", [], [ONLY_PROVIDES_NEEDED]),
-    CharacterTrait::new("Patient", [], []),
-    CharacterTrait::new("Stubborn", [], [SUICIDE_NEVER]),
+    CharacterTrait::new_work_ethic("Ambitious", [], [ALWAYS_PROVIDES_ALL], []),
+    CharacterTrait::new_work_ethic("Content", [], [SUICIDE_NEVER], []),
+    CharacterTrait::new_work_ethic("Diligent", [], [ALWAYS_PROVIDES_ALL], []),
+    CharacterTrait::new_work_ethic("Fickle", [], [], []),
+    CharacterTrait::new_work_ethic("Impatient", [], [], []),
+    CharacterTrait::new_work_ethic("Lazy", [], [ONLY_PROVIDES_NEEDED], []),
+    CharacterTrait::new_work_ethic("Patient", [], [], []),
+    CharacterTrait::new_work_ethic("Stubborn", [], [SUICIDE_NEVER], []),
 ];

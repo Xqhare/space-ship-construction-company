@@ -20,6 +20,7 @@ use crate::{
 };
 
 pub mod name;
+pub mod traits;
 
 pub struct Character {
     pub name: CharacterName,
@@ -31,7 +32,6 @@ pub struct Character {
     pub retirement: Utc,
     pub teams: Vec<TeamBoxSlotId>,
     /// The character's traits.
-    /// For lookup purposes.
     /// All traits must be unique.
     traits: Vec<&'static CharacterTrait>,
     skill: Vec<CharacterSkill>,
@@ -92,6 +92,9 @@ impl Character {
             let mut stats = data_box.stats.get_full_stats();
             for skill in self.skill.iter() {
                 // TODO: Apply skill to relevant stats
+            }
+            for char_trait in self.traits.iter() {
+                // TODO: Apply traits to relevant stats.
             }
             Ok(stats)
         } else {
