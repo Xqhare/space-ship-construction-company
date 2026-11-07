@@ -1,7 +1,9 @@
 use crate::{
     modules::component::{builder::ComponentBuilder, capability::Capability},
-    runtime::DataBoxSlotId,
-    utils::boxes::data_box::{DataBox, flag_box::Flag},
+    utils::boxes::{
+        DataBoxSlotId,
+        data_box::{DataBox, flag_box::Flag},
+    },
 };
 
 mod builder;
@@ -70,13 +72,11 @@ impl Component {
         if let Some(base_value_pair) = capability.impacted_base_value_pair() {
             let (base_value_name, base_value_value) = base_value_pair.as_parts();
             data_box_ref
-                .get_stat_box_mut()
+                .stats
                 .add_or_update_base_value(base_value_name, base_value_value);
         }
         for modifier in capability.inherent_modifiers() {
-            data_box_ref
-                .get_stat_box_mut()
-                .add_modifier(modifier.clone());
+            data_box_ref.stats.add_modifier(modifier.clone());
         }
         self.capabilities.push(capability);
     }
@@ -109,8 +109,7 @@ mod tests {
             modifier::{Modifier, ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
         },
         needs_home::BaseValuePair,
-        runtime::DataBoxSlotId,
-        utils::boxes::data_box::DataBox,
+        utils::boxes::{DataBoxSlotId, data_box::DataBox},
     };
 
     fn make_test_component(slot_id: DataBoxSlotId) -> Component {
@@ -158,7 +157,7 @@ mod tests {
         let db = map
             .get_mut(*component.get_data_box())
             .expect("Id must exist");
-        let stb = db.get_stat_box_mut();
+        let stb = &mut db.stats;
         stb.add_base_value("health", &HpFloat::new(2, 0));
         stb.add_modifier(modifier_utc.clone());
         stb.add_modifier(flat_modifier);
@@ -166,7 +165,7 @@ mod tests {
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(44, 0));
         component.add_component(make_test_component(real_id), db);
-        let stb = db.get_stat_box_mut();
+        let stb = &db.stats;
         let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(44, 0));
@@ -179,7 +178,7 @@ mod tests {
         assert!(capability.is_ok());
         let capability = capability.unwrap();
         component.add_capability(capability, db);
-        let stb = db.get_stat_box_mut();
+        let stb = &db.stats;
         let datas = stb.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(84, 0));
@@ -189,14 +188,13 @@ mod tests {
     fn basic_component_datas() {
         let mut map = SlotMap::new();
         let mut db = DataBox::new();
-        db.get_stat_box_mut()
-            .add_base_value("health", &HpFloat::new(2, 0));
+        db.stats.add_base_value("health", &HpFloat::new(2, 0));
         let real_id = map.insert(db);
         let component = make_test_component(real_id);
         let datas = map
             .get_mut(*component.get_data_box())
             .unwrap()
-            .get_stat_box_mut()
+            .stats
             .get_full_stats();
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(2, 0));
 
@@ -211,10 +209,9 @@ mod tests {
         let modifier = ModifierWithEndUtc::new_no_end(modifier);
         let stb = map
             .get_mut(*component.get_data_box())
-            .expect("Id must exist")
-            .get_stat_box_mut();
-        stb.add_modifier(modifier);
-        let datas = stb.get_full_stats();
+            .expect("Id must exist");
+        stb.stats.add_modifier(modifier);
+        let datas = stb.stats.get_full_stats();
         assert!(datas.contains_key("health"));
         assert!(datas.get("health").unwrap().as_hp_float().unwrap() == &HpFloat::new(1, 0));
     }

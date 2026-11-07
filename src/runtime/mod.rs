@@ -51,10 +51,12 @@ impl Runtime {
         word_smith_path: P,
         all_events_path: P,
     ) -> SSCCResult<Runtime> {
-        let mut slot_map: SlotMap<DataBox> = SlotMap::with_capacity(64);
+        let mut data_box_slot_map: SlotMap<DataBox> = SlotMap::with_capacity(64);
+        let mut character_slot_map: SlotMap<Character> = SlotMap::with_capacity(64);
+        let mut team_slot_map: SlotMap<Team> = SlotMap::with_capacity(64);
         let mut super_box = SuperBox::new(
-            slot_map.insert(DataBox::new()),
-            slot_map.insert(DataBox::new()),
+            data_box_slot_map.insert(DataBox::new()),
+            data_box_slot_map.insert(DataBox::new()),
             init_world_seed,
         );
         let utils = Utils::new(
@@ -66,10 +68,12 @@ impl Runtime {
         let event_store = EventStore::init_new(all_events_path)?;
         Ok(Runtime {
             utils,
-            data_box_slot_map: slot_map,
+            data_box_slot_map,
             super_box,
             event_queue,
             event_store,
+            character_slot_map,
+            team_slot_map,
         })
     }
 }

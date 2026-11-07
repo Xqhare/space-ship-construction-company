@@ -4,7 +4,7 @@ use horae::Utc;
 use crate::{
     error::new_xff_serde_error,
     modules::event::event_queue::{queue_event::QueueEvent, tick::Tick},
-    runtime::DataBoxSlotId,
+    utils::boxes::DataBoxSlotId,
 };
 
 /// Helper enum for the event queue

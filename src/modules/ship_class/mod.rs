@@ -3,7 +3,7 @@ use athena::slot_map::SlotMapIndex;
 use crate::{
     error::{SSCCResult, new_ship_class_builder_error},
     modules::component::{Component, capability::Capability},
-    runtime::DataBoxSlotId,
+    utils::boxes::DataBoxSlotId,
 };
 
 #[non_exhaustive]
