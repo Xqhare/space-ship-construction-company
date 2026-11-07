@@ -19,31 +19,36 @@ impl TraitStatImpact {
     }
     /// Creates a new stat impact.
     ///
+    /// Overwrites the default value held by `base_value` with `value`.
     /// The kind will be `ModifierType::Percentage`.
     /// The op will be `ModifierOp::Add`.
     ///
-    /// For more info see [`StatBox::get_all_stats()`]
-    pub const fn new(base_value_pair: ConstBVPair) -> TraitStatImpact {
+    /// For more info see [`StatBox::get_full_stats()`]
+    pub const fn new(base_value: ConstBVPair<'static>, value: f32) -> TraitStatImpact {
         let mut tsi = TraitStatImpact::const_default();
-        tsi.base_value_pair = base_value_pair;
+        tsi.base_value_pair = (base_value.0, Some(value));
         tsi
     }
     /// Create a new stat impact of kind `ModifierType::Flat`.
     ///
-    /// The op will be `ModififerOp::Add`.
-    pub const fn new_flat(base_value_pair: ConstBVPair) -> TraitStatImpact {
-        let mut tsi = TraitStatImpact::new(base_value_pair);
+    /// Overwrites the default value held by `base_value` with `value`.
+    /// The op will be `ModifierOp::Add`.
+    pub const fn new_flat(base_value: ConstBVPair<'static>, value: f32) -> TraitStatImpact {
+        let mut tsi = TraitStatImpact::new(base_value, value);
         tsi.kind = ModifierType::Flat;
         tsi
     }
-    /// Create a fully custom stat impact
+    /// Create a fully custom stat impact.
+    ///
+    /// Overwrites the default value held by `base_value` with `value`.
     pub const fn custom(
-        base_value_pair: ConstBVPair,
+        base_value: ConstBVPair<'static>,
+        value: f32,
         kind: ModifierType,
         op: ModifierOp,
     ) -> TraitStatImpact {
         TraitStatImpact {
-            base_value_pair,
+            base_value_pair: (base_value.0, Some(value)),
             kind,
             op,
         }

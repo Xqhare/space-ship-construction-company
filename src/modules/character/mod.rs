@@ -8,14 +8,16 @@ use tyche::RngApi;
 use crate::{
     consts::characters::traits::{
         CharacterTrait,
-        registries::{CharacterTraitRegistryId, get_trait_from_registry},
+        registries::get_trait_from_registry_by_name,
     },
     error::{SSCCResult, new_character_error, new_generation_error},
     modules::character::name::CharacterName,
-    runtime::DataBoxSlotId,
     utils::{
         Utils,
-        boxes::data_box::{DataBox, flag_box::FlagBox, stat_box::StatBox},
+        boxes::{
+            DataBoxSlotId, TeamBoxSlotId,
+            data_box::{DataBox, flag_box::FlagBox, stat_box::StatBox},
+        },
     },
 };
 
@@ -114,10 +116,10 @@ impl Character {
                 .add_ctx(format!("DataBox {:?} no longer exists", self.data_box)))
         }
     }
-    pub fn add_trait_via_id(&mut self, trait_id: CharacterTraitRegistryId) -> SSCCResult<()> {
+    pub fn add_trait_via_name(&mut self, trait_name: &str) -> SSCCResult<()> {
         self.add_trait(
-            get_trait_from_registry(trait_id)
-                .ok_or(new_character_error("Can't add trait, ID invalid"))?,
+            get_trait_from_registry_by_name(trait_name)
+                .ok_or(new_character_error("Can't add trait, name invalid"))?,
         )
     }
     pub fn add_trait(&mut self, character_trait: &'static CharacterTrait) -> SSCCResult<()> {

@@ -1,93 +1,44 @@
 use crate::consts::characters::{
     base_values::{HEALTH, SOCIABILITY},
     flags::SPECIAL_NEEDS,
-    traits::{CharacterTrait, TraitStatImpact},
+    traits::{CharacterTrait, impact::TraitStatImpact},
 };
 
-pub static TRAIT_HEALTH_REGISTRY: [CharacterTrait; 15] = [
-    CharacterTrait::new_health(
-        "Dwarf",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-0.05)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Giant",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(0.1)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Scarred",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-0.05)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Short",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-0.05)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Puny",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-0.05)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Mute",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-5.0)))],
-        [SPECIAL_NEEDS],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Blind",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-5.0)))],
-        [SPECIAL_NEEDS],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Deaf",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-5.0)))],
-        [SPECIAL_NEEDS],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Paraplegic",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(-4.0)))],
-        [SPECIAL_NEEDS],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Tall",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(0.05)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Strong",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(0.25)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Spindly",
-        [TraitStatImpact::new((HEALTH.0, Some(-0.5)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Herculean",
-        [TraitStatImpact::new((SOCIABILITY.0, Some(0.5)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health(
-        "Feeble",
-        [TraitStatImpact::new((HEALTH.0, Some(-0.5)))],
-        [],
-        [],
-    ),
-    CharacterTrait::new_health("Disfigured", [], [SPECIAL_NEEDS], []),
-];
+define_trait_registry! {
+    pub static TRAIT_HEALTH_REGISTRY = [
+        TRAIT_HEALTH_DWARF => CharacterTrait::health("Dwarf")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -0.05)]),
+        TRAIT_HEALTH_GIANT => CharacterTrait::health("Giant")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, 0.1)]),
+        TRAIT_HEALTH_SCARRED => CharacterTrait::health("Scarred")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -0.05)]),
+        TRAIT_HEALTH_SHORT => CharacterTrait::health("Short")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -0.05)]),
+        TRAIT_HEALTH_PUNY => CharacterTrait::health("Puny")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -0.05)]),
+        TRAIT_HEALTH_MUTE => CharacterTrait::health("Mute")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -5.0)])
+            .with_flags([SPECIAL_NEEDS]),
+        TRAIT_HEALTH_BLIND => CharacterTrait::health("Blind")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -5.0)])
+            .with_flags([SPECIAL_NEEDS]),
+        TRAIT_HEALTH_DEAF => CharacterTrait::health("Deaf")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -5.0)])
+            .with_flags([SPECIAL_NEEDS]),
+        TRAIT_HEALTH_PARAPLEGIC => CharacterTrait::health("Paraplegic")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, -4.0)])
+            .with_flags([SPECIAL_NEEDS]),
+        TRAIT_HEALTH_TALL => CharacterTrait::health("Tall")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, 0.05)]),
+        TRAIT_HEALTH_STRONG => CharacterTrait::health("Strong")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, 0.25)]),
+        TRAIT_HEALTH_SPINDLY => CharacterTrait::health("Spindly")
+            .with_impacts([TraitStatImpact::new(HEALTH, -0.5)]),
+        TRAIT_HEALTH_HERCULEAN => CharacterTrait::health("Herculean")
+            .with_impacts([TraitStatImpact::new(SOCIABILITY, 0.5)]),
+        TRAIT_HEALTH_FEEBLE => CharacterTrait::health("Feeble")
+            .with_impacts([TraitStatImpact::new(HEALTH, -0.5)]),
+        TRAIT_HEALTH_DISFIGURED => CharacterTrait::health("Disfigured")
+            .with_flags([SPECIAL_NEEDS]),
+    ];
+}
