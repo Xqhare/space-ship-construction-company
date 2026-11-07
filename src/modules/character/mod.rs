@@ -8,7 +8,10 @@ use tyche::RngApi;
 use crate::{
     consts::characters::traits::{CharacterTrait, registries::get_trait_from_registry_by_name},
     error::{SSCCResult, new_character_error, new_generation_error},
-    modules::character::name::CharacterName,
+    modules::character::{
+        name::CharacterName,
+        skill::{CharacterSkill, CharacterSkillRegistryId},
+    },
     utils::{
         Utils,
         boxes::{
@@ -19,7 +22,8 @@ use crate::{
 };
 
 pub mod name;
-pub mod traits;
+pub mod skill;
+pub mod r#trait;
 
 pub struct Character {
     pub name: CharacterName,
