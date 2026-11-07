@@ -1,6 +1,5 @@
 use crate::consts::characters::traits::impact::TraitStatImpact;
 
-#[macro_use]
 macro_rules! define_trait_registry {
     (
         pub static $registry_name:ident = [
