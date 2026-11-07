@@ -24,7 +24,7 @@ impl TraitStatImpact {
     /// The op will be `ModifierOp::Add`.
     ///
     /// For more info see [`StatBox::get_full_stats()`]
-    pub const fn new(base_value: ConstBVPair<'static>, value: f32) -> TraitStatImpact {
+    pub const fn new(base_value: ConstBVPair, value: f32) -> TraitStatImpact {
         let mut tsi = TraitStatImpact::const_default();
         tsi.base_value_pair = (base_value.0, Some(value));
         tsi
@@ -33,7 +33,7 @@ impl TraitStatImpact {
     ///
     /// Overwrites the default value held by `base_value` with `value`.
     /// The op will be `ModifierOp::Add`.
-    pub const fn new_flat(base_value: ConstBVPair<'static>, value: f32) -> TraitStatImpact {
+    pub const fn new_flat(base_value: ConstBVPair, value: f32) -> TraitStatImpact {
         let mut tsi = TraitStatImpact::new(base_value, value);
         tsi.kind = ModifierType::Flat;
         tsi
@@ -42,7 +42,7 @@ impl TraitStatImpact {
     ///
     /// Overwrites the default value held by `base_value` with `value`.
     pub const fn custom(
-        base_value: ConstBVPair<'static>,
+        base_value: ConstBVPair,
         value: f32,
         kind: ModifierType,
         op: ModifierOp,
