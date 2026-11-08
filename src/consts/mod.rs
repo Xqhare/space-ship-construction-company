@@ -1,7 +1,8 @@
+use crate::consts::base_values::science::{SCI_BONUS_ALL_FIELDS, SCI_REGISTRY_OF_REGISTRIES};
+
 pub mod base_values;
 pub mod characters;
 pub mod flags;
-pub mod science;
 
 pub type ConstBVPair = (&'static str, Option<f32>);
 
@@ -13,4 +14,15 @@ pub mod durations {
     pub const DAY_DUR_SECS: Duration = Duration::from_secs(60 * 60 * 24);
     pub const WEEK_DUR_SECS: Duration = Duration::from_secs(60 * 60 * 24 * 7);
     pub const FORTNIGHT_DUR_SECS: Duration = Duration::from_secs(60 * 60 * 24 * 14);
+}
+
+pub fn normalise_bvp_name(bvp_name: &'static str) -> Vec<&'static str> {
+    if bvp_name == SCI_BONUS_ALL_FIELDS.0 {
+        SCI_REGISTRY_OF_REGISTRIES
+            .iter()
+            .flat_map(|reg| reg.iter().map(|field| field.name))
+            .collect()
+    } else {
+        vec![bvp_name]
+    }
 }

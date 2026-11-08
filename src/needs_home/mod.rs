@@ -5,8 +5,13 @@ use athena::float::HpFloat;
 use nemesis::NemesisError;
 
 use crate::{
-    consts::characters::traits::CharacterTrait, error::new_xff_serde_error,
-    modules::modifier::r#type::ModifierType, utils::op::Op,
+    consts::{
+        base_values::science::{SCI_BONUS_ALL_FIELDS, SCI_REGISTRY_OF_REGISTRIES},
+        characters::traits::CharacterTrait,
+    },
+    error::new_xff_serde_error,
+    modules::modifier::r#type::ModifierType,
+    utils::op::Op,
 };
 
 /// A pair of base value name and value
@@ -57,11 +62,6 @@ impl XffSerde for BaseValuePair {
         obj.insert("base_value_value", self.base_value_value);
         xff!(obj)
     }
-}
-pub fn normalise_bvp_name(bvp_name: &str) -> Vec<&'static str> {
-    // SCI_BONUS_ALL_FIELDS for example needs to be normalised into a vec of *all* science
-    // fields
-    todo!()
 }
 
 pub fn accum_char_traits(

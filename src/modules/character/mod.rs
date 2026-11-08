@@ -190,22 +190,12 @@ impl Character {
         character_trait: &'static CharacterTrait,
         data_box_slot_map: &mut SlotMap<DataBox>,
     ) {
-        character_trait
-            .conflicting_traits()
-            .iter()
-            .filter_map(|conf| {
-                if self.traits.has_trait(conf) {
-                    Some(*conf)
-                } else {
-                    None
-                }
-            })
-            .for_each(|conf| {
-                self.remove_trait(
-                    get_trait_from_registry_by_name(conf).expect("Make this safe"),
-                    data_box_slot_map,
-                )
-            });
+        for &conf in character_trait.conflicting_traits() {
+            self.remove_trait(
+                get_trait_from_registry_by_name(conf).expect("Make this safe"),
+                data_box_slot_map,
+            );
+        }
         self.traits.force_trait(character_trait);
         self.add_flags(character_trait.flags(), data_box_slot_map);
     }

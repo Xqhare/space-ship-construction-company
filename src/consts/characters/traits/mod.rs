@@ -68,41 +68,6 @@ impl PartialEq for CharacterTrait {
 impl Eq for CharacterTrait {}
 
 impl CharacterTrait {
-    pub fn apply_to_stats(&self, stats: &mut Object) {
-        for impact in self.affected_base_value_pairs().iter() {
-            let bvp_name = impact.base_value_name;
-            let bvp_value: HpFloat = impact.base_value_value.into();
-            let normalised_bvp_names = normalise_bvp_name(bvp_name);
-            for normalised_bvp_name in normalised_bvp_names {
-                if let Some(to_impact) = stats.get_mut(normalised_bvp_name)
-                    && let Some(float) = to_impact.as_hp_float_mut()
-                {
-                    *float = match impact.op {
-                        Op::Add => *float + bvp_value,
-                        Op::Sub => *float - bvp_value,
-                        Op::Mul => *float * bvp_value,
-                        Op::Div => *float / bvp_value,
-                        // NOTE: `Set` & `Lim` don't really work if done like this;
-                        // They would need to be handled across *all* traits modifying the
-                        // same base_value.
-                        // TODO: Consider if that trade-off is worth it. I don't
-                        // expect Traits to use them much anyways if at all.
-                        // Should the trait be the last trait of a character impacting a specific base_value they
-                        // almost work as intended (Set should use the largest set
-                        // available across all applicable impacts of all traits, same for limit; but hey)
-                        Op::Set => bvp_value,
-                        Op::Lim => {
-                            if *float > bvp_value {
-                                bvp_value
-                            } else {
-                                *float
-                            }
-                        }
-                    };
-                }
-            }
-        }
-    }
     pub const fn normal(name: &'static str) -> CharacterTrait {
         Self::new(name, CharacterTraitKind::Normal)
     }
