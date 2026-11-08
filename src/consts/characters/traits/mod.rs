@@ -1,10 +1,4 @@
-use aequa::Object;
-use athena::float::HpFloat;
-
-use crate::{
-    consts::characters::traits::impact::TraitStatImpact, needs_home::normalise_bvp_name,
-    utils::op::Op,
-};
+use crate::consts::characters::traits::impact::TraitStatImpact;
 
 macro_rules! define_trait_registry {
     (
