@@ -6,12 +6,11 @@ use nemesis::NemesisResultExt;
 
 use crate::{
     error::{SSCCResult, new_xff_serde_error},
-    modules::modifier::{op::ModifierOp, r#type::ModifierType},
+    modules::modifier::r#type::ModifierType,
     needs_home::BaseValuePair,
-    utils::boxes::data_box::flag_box::Flag,
+    utils::{boxes::data_box::flag_box::Flag, op::Op},
 };
 
-pub mod op;
 pub mod r#type;
 
 #[derive(Debug, Clone)]
@@ -78,7 +77,7 @@ pub struct Modifier {
     pub duration: Option<Duration>,
     pub adds_flags: Option<Vec<Flag>>,
     pub required_flags: Option<Vec<Flag>>,
-    pub op: ModifierOp,
+    pub op: Op,
 }
 
 impl Modifier {
@@ -140,7 +139,7 @@ impl XffSerde for Modifier {
                 tmp_vec
             };
             let kind = ModifierType::from_xff(k)?;
-            let op = ModifierOp::from_xff(op)?;
+            let op = Op::from_xff(op)?;
             let duration = obj.get("duration").and_then(|v| v.into_std_duration());
             let adds_flags = obj.get("adds_flags").and_then(|v| v.as_array()).map(|ary| {
                 let mut tmp_vec = Vec::with_capacity(ary.len());

@@ -12,33 +12,33 @@ define_trait_registry! {
         // Ck3 Traits
         TRAIT_INTELLECT_GENIUS => CharacterTrait::intellect("Genius")
             .with_impacts([
-                TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, 7.5),
-                TraitStatImpact::new(SOCIABILITY, -10.0),
+                TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 7.5),
+                TraitStatImpact::new(SOCIABILITY.0, -10.0),
             ])
             .with_flags([ALWAYS_PROVIDES_ALL]),
         TRAIT_INTELLECT_SHREWD => CharacterTrait::intellect("Shrewd")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, 2.5)])
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 2.5)])
             .with_flags([ALWAYS_PROVIDES_ALL]),
         // Ck2 Rolls Community Mod Traits
         TRAIT_INTELLECT_ASTUTE => CharacterTrait::intellect("Astute")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, 5.0)])
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 5.0)])
             .with_flags([ALWAYS_PROVIDES_RESEARCH]),
         TRAIT_INTELLECT_BRIGHT => CharacterTrait::intellect("Bright")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, 0.5)])
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 0.5)])
             .with_flags([ALWAYS_PROVIDES_RESEARCH]),
         TRAIT_INTELLECT_DENSE => CharacterTrait::intellect("Dense")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, -2.5)]),
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -2.5)]),
         TRAIT_INTELLECT_DIM => CharacterTrait::intellect("Dim")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, -0.5)]),
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -0.5)]),
         TRAIT_INTELLECT_SMART => CharacterTrait::intellect("Smart")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, 1.5)])
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 1.5)])
             .with_flags([ALWAYS_PROVIDES_RESEARCH]),
         // Custom additions
         TRAIT_INTELLECT_SIMPLETON => CharacterTrait::intellect("Simpleton")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, -7.5)]),
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -7.5)]),
         TRAIT_INTELLECT_DULL => CharacterTrait::intellect("Dull")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, -1.5)]),
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -1.5)]),
         TRAIT_INTELLECT_DIMWIT => CharacterTrait::intellect("Dimwit")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, -5.0)]),
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -5.0)]),
     ];
 }

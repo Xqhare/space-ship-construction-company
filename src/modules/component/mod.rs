@@ -106,10 +106,13 @@ mod tests {
         consts::flags::capabilities::SPACE_FLIGHT,
         modules::{
             component::{Component, capability::Capability},
-            modifier::{Modifier, ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
+            modifier::{Modifier, ModifierWithEndUtc, r#type::ModifierType},
         },
         needs_home::BaseValuePair,
-        utils::boxes::{DataBoxSlotId, data_box::DataBox},
+        utils::{
+            boxes::{DataBoxSlotId, data_box::DataBox},
+            op::Op,
+        },
     };
 
     fn make_test_component(slot_id: DataBoxSlotId) -> Component {
@@ -142,7 +145,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Add,
+            op: Op::Add,
         };
         let modifier_utc = ModifierWithEndUtc::new_no_end(modifier);
         let flat_modifier = Modifier {
@@ -151,7 +154,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Add,
+            op: Op::Add,
         };
         let flat_modifier = ModifierWithEndUtc::new_no_end(flat_modifier);
         let db = map
@@ -204,7 +207,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Mul,
+            op: Op::Mul,
         };
         let modifier = ModifierWithEndUtc::new_no_end(modifier);
         let stb = map

@@ -9,16 +9,36 @@ struct Character {
     stats: DataBoxId,
     birthday: Utc,
     teams: Vec<TeamBoxSlotId>,
+    memories: Vec<Memories>,
     traits: Vec<Trait>,
     skills: Vec<Skill>
 }
 
 struct Skill {
     name: String,
-    affected_base_value_pairs: Vec<(String, HpFloat)>,
+    master: Option(SkillStatImpact),
+    secondaries: Vec<SkillStatImpact),
     affinity: HpFloat,
     points: HpFloat
     level: Level
+}
+
+pub struct SkillStatImpact {
+    base_value: String,
+    factor: HpFloat,
+    op: ModifierOp,
+}
+
+fn calc_final_stat_impact(ssi: SkillStatImpact, aff: HpFloat, level: Level) -> (HpFloat, ModifierOp) {
+    let base_level = match level {
+        Level::Low(inner)    => 1 + inner,        // 1..=10
+        Level::Medium(inner) => 12 + inner,       // 12..=21 (jump from 10 -> 12)
+        Level::High(inner)   => 25 + inner,       // 25..=34 (jump from 21 -> 25)
+        Level::Ultra(inner)  => 50 + (inner * 5), // 50, 55, 60 (massive jump)
+    };
+    let level_factor = HpFloat::from(base_level) * aff;
+    let final_factor = ssi.factor * level_factor;
+    (final_factor, ssi.op)
 }
 // Numbers are made up
 // NOTE: Because of the per level cost formula, the distance between levels should always be COST*2 at a minimum
@@ -60,6 +80,44 @@ stuct Name {
 }
 
 ```
+
+## Needs
+
+To factor out some base_value_pairs I copied over from the sims2 wiki:
+
+```rust
+pub const COMFORT: ConstBVPair = ("comfort", None);
+pub const FULFILMENT: ConstBVPair = ("fulfilment", None);
+pub const ENVIRONMENT: ConstBVPair = ("environment", None);
+```
+
+These don't *really* make sense as base_values; However I think it does make sense to keep them for a sub system that interacts with the 'Happiness' base_value.
+
+It would also fit nicely with the goals, if the environment or fulfilment of a char in its current team / job is low: why not change from 'get a promotion' to be stuck leading the team one hates (if getting the job of ones boss) to change laterally in the company?
+
+## Memories / Goals
+
+For a much later stage probably.
+
+I would love a memory and goal system.
+
+- Life goals
+- Current goal (trying to further the life goal)
+- good memories & bad memories
+- Friends / Characters the character likes
+- Enemies / Characters the character dislikes
+
+My current thinking:
+
+In a sim step, choose random employees.
+
+Then:
+
+Wants to interact with others -> Choose interaction that fits char -> Choose char to interact with (inside the same team etc) -> Interact -> If 'impactful' (dont know how that will work) add as memory (good or bad).
+
+Goals would steer the choosing of interactions / actions in general.
+
+If the Life goal is 'become CEO', each current goal will be a more simple 'get promoted' goal. That would steet the char to improve not only the currently needed skills, but also the skills of the wanted position (be it for the work itself or social / management skills).
 
 ## Affinity
 

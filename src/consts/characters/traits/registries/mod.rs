@@ -43,11 +43,11 @@ pub fn get_trait_from_registry_by_name(trait_name: &str) -> Option<&'static Char
 define_trait_registry! {
     pub static TRAIT_NORMAL_REGISTRY = [
         TRAIT_NORMAL_CURIOUS => CharacterTrait::normal("Curious")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, 1.0)])
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 1.0)])
             .with_flags([ALWAYS_PROVIDES_RESEARCH])
             .with_conflicts(["Incurious"]),
         TRAIT_NORMAL_INCURIOUS => CharacterTrait::normal("Incurious")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS, -1.0)])
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -1.0)])
             .with_conflicts(["Curious"]),
         TRAIT_NORMAL_NUMBERPHILE => CharacterTrait::normal("Numberphile"),
         TRAIT_NORMAL_STRATEGIST  => CharacterTrait::normal("Strategist"),

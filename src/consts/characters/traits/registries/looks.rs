@@ -6,7 +6,7 @@ use crate::consts::characters::{
 define_trait_registry! {
     pub static TRAIT_LOOKS_REGISTRY = [
         TRAIT_LOOKS_ABERRANT   => CharacterTrait::looks("Aberrant")
-            .with_impacts([TraitStatImpact::new(SOCIABILITY, -0.1)]), // 3.125
+            .with_impacts([TraitStatImpact::new(SOCIABILITY.0, -0.1)]), // 3.125
         TRAIT_LOOKS_HIDEOUS    => CharacterTrait::looks("Hideous"),   // 6.25
         TRAIT_LOOKS_UNSIGHTLY  => CharacterTrait::looks("Unsightly"), // 12.5
         TRAIT_LOOKS_APPEALING  => CharacterTrait::looks("Appealing"), // 25

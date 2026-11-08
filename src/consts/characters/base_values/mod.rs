@@ -8,30 +8,24 @@
 
 use crate::consts::ConstBVPair;
 
-pub const ALL_CHAR_BASES: [ConstBVPair; 12] = [
+pub const ALL_CHAR_BASES: [ConstBVPair; 8] = [
     HEALTH,
     MENTAL_HEALTH,
     PAIN,
     MONEY,
     HAPPINESS,
-    ENVIRONMENT,
     IQ,
     SOCIABILITY,
-    FULFILMENT,
-    COMFORT,
-    STRESS,
     STRENGTH,
 ];
 
 pub const HEALTH: ConstBVPair = ("health", Some(1000.0));
 pub const MENTAL_HEALTH: ConstBVPair = ("mental_health", Some(1000.0));
 pub const PAIN: ConstBVPair = ("pain", Some(0.0));
-pub const MONEY: ConstBVPair = ("money", None);
+pub const MONEY: ConstBVPair = ("money", Some(0.0));
 pub const HAPPINESS: ConstBVPair = ("happiness", Some(1000.0));
-pub const ENVIRONMENT: ConstBVPair = ("environment", None);
+
+// Values constructed during char init
 pub const IQ: ConstBVPair = ("iq", None);
 pub const SOCIABILITY: ConstBVPair = ("sociability", None);
-pub const FULFILMENT: ConstBVPair = ("fulfilment", None);
-pub const COMFORT: ConstBVPair = ("comfort", None);
-pub const STRESS: ConstBVPair = ("stress", None);
 pub const STRENGTH: ConstBVPair = ("strength", None);

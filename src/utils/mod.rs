@@ -15,6 +15,7 @@ use crate::error::{SSCCResult, new_startup_error};
 
 pub mod boxes;
 mod functions;
+pub mod op;
 pub use functions::*;
 
 pub struct Utils {

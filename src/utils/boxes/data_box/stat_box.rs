@@ -3,7 +3,8 @@ use horae::Utc;
 
 use crate::{
     error::{SSCCResult, new_startup_error},
-    modules::modifier::{ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
+    modules::modifier::{ModifierWithEndUtc, r#type::ModifierType},
+    utils::op::Op,
 };
 
 #[derive(Debug, Clone)]
@@ -361,26 +362,26 @@ fn make_mod_accum(
         for pair in modifier.get_pairs(base_value_name) {
             let value = pair.base_value_value;
             match modifier.op {
-                ModifierOp::Add => accum = accum + value,
-                ModifierOp::Sub => accum = accum - value,
-                ModifierOp::Mul => {
+                Op::Add => accum = accum + value,
+                Op::Sub => accum = accum - value,
+                Op::Mul => {
                     if !accum.is_zero() {
                         accum = accum * value;
                     } else {
                         accum = value;
                     }
                 }
-                ModifierOp::Div => {
+                Op::Div => {
                     if !value.is_zero() {
                         accum = accum / value;
                     }
                 }
-                ModifierOp::Set => {
+                Op::Set => {
                     if set.is_none() || set < (Some(value)) {
                         set = Some(value);
                     }
                 }
-                ModifierOp::Lim => {
+                Op::Lim => {
                     if limit.is_none() || limit < (Some(value)) {
                         limit = Some(value);
                     }
@@ -418,9 +419,9 @@ mod tests {
     use horae::Utc;
 
     use crate::{
-        modules::modifier::{Modifier, ModifierWithEndUtc, op::ModifierOp, r#type::ModifierType},
+        modules::modifier::{Modifier, ModifierWithEndUtc, r#type::ModifierType},
         needs_home::BaseValuePair,
-        utils::boxes::data_box::stat_box::StatBox,
+        utils::{boxes::data_box::stat_box::StatBox, op::Op},
     };
 
     #[test]
@@ -437,7 +438,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Add,
+            op: Op::Add,
         };
         stat_box.add_modifier(ModifierWithEndUtc::new(modifier, utc));
         let flat_modifier = Modifier {
@@ -449,7 +450,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Add,
+            op: Op::Add,
         };
         stat_box.add_modifier(ModifierWithEndUtc::new(flat_modifier, utc));
         let result = stat_box.get_full_stats();
@@ -464,7 +465,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Add,
+            op: Op::Add,
         };
         stat_box.add_modifier(ModifierWithEndUtc::new(unused_modifier, utc));
         let unused_flat_modifier = Modifier {
@@ -476,7 +477,7 @@ mod tests {
             duration: None,
             adds_flags: None,
             required_flags: None,
-            op: ModifierOp::Add,
+            op: Op::Add,
         };
         stat_box.add_modifier(ModifierWithEndUtc::new(unused_flat_modifier, utc));
         let result = stat_box.get_full_stats();
