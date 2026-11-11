@@ -5,13 +5,8 @@ use athena::float::HpFloat;
 use nemesis::NemesisError;
 
 use crate::{
-    consts::{
-        base_values::science::{SCI_BONUS_ALL_FIELDS, SCI_REGISTRY_OF_REGISTRIES},
-        characters::traits::CharacterTrait,
-    },
-    error::new_xff_serde_error,
-    modules::modifier::r#type::ModifierType,
-    utils::op::Op,
+    consts::characters::traits::CharacterTrait, error::new_xff_serde_error,
+    modules::modifier::r#type::ModifierType, utils::op::Op,
 };
 
 /// A pair of base value name and value

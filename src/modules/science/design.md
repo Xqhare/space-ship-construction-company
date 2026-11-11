@@ -1,227 +1,122 @@
+# Science & Research System Design
+
+## 1. Core Structure Overview
+
+Static field definitions and their tier/parent DAG live in [`src/consts/base_values/science.rs`](file:///home/xqhare/Adytum/rust/space-ship-construction-company/src/consts/base_values/science.rs) via `ConstScienceField` and `SCI_REGISTRY_OF_REGISTRIES`.
+
+The runtime research module tracks dynamic progress per field across different `Academia` levels:
 
 ```rust
-struct ResearchFields {
-    HashMap<ResearchFieldKind, Field>
+pub struct ResearchFields {
+    /// Keyed by `ConstScienceField.name` (or `&'static ConstScienceField`)
+    fields: HashMap<&'static str, FieldState>,
 }
 
-struct Field {
-    affinity: HpFloat,
-    points: HpFloat,
-    /// A nation can restrict the tech level of a field.
-    /// This is done by setting `Some` value that is bigger than 0.
-    /// Tech levels that exceed `current_year + restricted` will not give points to higher academia levels
-    /// This means the number works counterintuitively: Small == big restriction; Big == small restriction
-    restricted: Option<u8>
+pub struct FieldState {
+    pub field: &'static ConstScienceField,
+    pub affinity: HpFloat,
+    pub points: HpFloat,
+    /// A nation or company can restrict the tech level of a field.
+    /// Tech levels that exceed `current_year + restricted` will not leak points to higher academia levels.
+    /// Small number == strict restriction; Large number == loose restriction.
+    pub restricted: Option<u8>,
 }
 
-struct Academia {
-    world: ResearchFields,
-    player: ResearchFields,
-    nations: HashMap<StateName, ResearchFields>
-    ai: HashMap<AiCompName, ResearchFields>
-    // Maybe with the correct State for faster lookups:
-    ai: HashMap<AiCompName, (StateName, ResearchFields)>
+pub struct Academia {
+    pub world: ResearchFields,
+    pub player: ResearchFields,
+    pub nations: HashMap<StateName, ResearchFields>,
+    pub ai: HashMap<AiCompName, (StateName, ResearchFields)>,
 }
 ```
 
-## Restriction
+---
 
-### Nation level
+## 2. Points, Affinity & Tech Level Formula
 
-Fields restricted here mean that any component / ship / whatever that uses that tech level or greater can only be sold to that nation state or on its market.
+- **Points (`points >= 0`):** The base bonus (in years) above `current_year`.
+- **Affinity:** Increases whenever points are added to a field, and decays once per year (slower once it reaches `0`, though negative affinity is possible).
+  - *Note on tick frequency:* Yearly decay keeps simulation overhead low compared to monthly/quarterly ticks.
 
-### Company level
-
-Fields restricted here mean that any component / ship / whatever that uses that tech level or greater can only be sold to that companies parent nation state.
-
-Selling on the national market would open up the tech to that market.
-
-## Affinity
-
-Whenever points are added to the `points` field of a `Field`, the `affinity` field is also increased.
-
-Decreasing the affinity will happen every year.
-
-As a result, the more research is done on a field, the higher the affinity. As soon as the work stops, it slowly decreases.
-
-When reaching 0 the decrease is slowed even more, but negative is possible!
-
-### Simulation Tick Choice
-
-To make it seem more fluid, it would be nice to move the decrease of affinity to lower (monthly, quarterly maybe), however that does impact performace; Propably unneccesarely so.
-
-## Points
-
-Points, their scale as yet undefined, are the basic bonus to the tech level of a field.
-They are used whenever an integer is needed for simulation calculations.
-
-Points may never be negative.
-
-# Simple Final Points Formula
-
-For any given field, the final tech level is calculated as:
-
-```
+### Final Tech Level Calculation
+For display and integer checks (e.g., unlocking special projects or component base values):
+```text
 final = current_year + round_down(points + (points * affinity))
-final_restricted = lim(restricted, final)
+final_restricted = lim(current_year + restricted, final)
 ```
-
-For internal calculations the round_down is omitted:
-
-```
+For internal simulation calculations (`final_sim`), `round_down` is omitted:
+```text
 final_sim = current_year + points + (points * affinity)
 ```
 
-# Academia
+---
 
-First, the game is split into Academia levels.
+## 3. Field Interdependence (Tiers & Parent Soft Caps)
 
-## World
+Fields are organized into 6 tiers in [`src/consts/base_values/science.rs`](file:///home/xqhare/Adytum/rust/space-ship-construction-company/src/consts/base_values/science.rs):
+- **Tier 0 (`T0Logic`):** Logic (Root)
+- **Tier 1 (`T1Formal`):** Mathematics, Philosophy, Empiricism
+- **Tier 2 (`T2Natural` & `T2Social`):** Physics, Biology, Chemistry, Economics, Psychology, etc.
+- **Tier 3 (`T3Applied`):** Meteorology, Optics, Materials, Quantum Physics, etc.
+- **Tier 4 (`T4Discipline`):** Engineering, Corporate Law, etc.
+- **Tier 5 (`T5SubDiscipline`):** Computer Science, Artificial Intelligence, Aerospace Engineering, etc.
 
-Represents the world baseline. It is not possible to fall further 'behind' in technology.
+### Parent Soft Caps & Catch-up Bonuses
+Each field (above Tier 0) lists its parent fields in `field.parents()`. Parents act as an anchor/soft cap for their children:
+- If a child field is **behind** its parent field(s), it receives a **growth bonus**.
+- If a child field is **ahead** of its parent field(s), it receives a **growth malus**.
+- The bonus/malus scales with how far behind or ahead the child field is relative to its parents.
+- **Tiers 0, 1 & 2** act as global anchors: they stay close to `current_year`, do not vary wildly between nations, and cannot be restricted. Players primarily interact with **Tier 3+** (and mostly **Tier 4+**).
 
-All other Academia levels are relative to the World Academia level.
+---
 
-Any field stored in the World Academia cannot be restricted.
+## 4. Academia Hierarchy & Restrictions
 
-## Nations
+Technology diffuses between three layers of Academia: **World** <-> **Nations** <-> **Player / AI Companies**.
 
-Come after the World Academia.
+1. **World Academia:**
+   - The global baseline. No field in World Academia can be restricted.
+2. **Nation Academia:**
+   - Sits below World Academia. On each simulation tick, each nation compares its fields against World Academia:
+     ```rust
+     for field in nation_academia {
+         let world_field = world_academia.get(field.field.name);
+         if field.final_restricted < world_field.final_sim {
+             field.learn_from(world_field);
+         } else if field.final_restricted > world_field.final_sim {
+             world_field.learn_from_restricted(field);
+         }
+     }
+     ```
+   - **Nation-level Restriction:** Any component or ship using a restricted tech level (or higher) can only be sold to that nation state or on its domestic market.
+3. **Player & AI Company Academia:**
+   - Sits below a parent Nation Academia and exchanges knowledge with it using the same `learn_from` / `learn_from_restricted` mechanism.
+   - **Company-level Restriction:** Companies can restrict their own fields (subject to espionage/events). Components using company-restricted tech can only be sold to the parent nation state; selling them on the open national market opens the tech to that market.
 
-Each nation has its own Academia level.
-Fields in the nation Academia can be restricted.
+---
 
-On the sim tick, each nation Academia level is compared to the World Academia level field by field.
+## 5. Player Interaction & R&D Division
 
+The player's R&D division is split into **Research** and **Development**, operated by character [`Team`](file:///home/xqhare/Adytum/rust/space-ship-construction-company/src/modules/team/mod.rs)s.
+
+### Research Teams & Work Modes
+Each research team sums its members' science field outputs from their `StatBox`es, applies team modifiers, and operates in one of three modes:
+
+| Mode | Member Impact | Output Scaling |
+| :--- | :--- | :--- |
+| **1. General** | Small bonuses to satisfaction / happiness (members pursue personal interests). | Sums passed along unmodified (+ possible flat ~10% bonus to general academia). |
+| **2. Specialised** | Neutral (no bonuses or maluses). | `+10–20%` to prioritized/project fields; `-20–30%` to irrelevant fields. |
+| **3. Focused** | Stacking timed stat maluses on team members (crunch/grind). | `+30%` to prioritized fields; irrelevant field output converted into prioritized fields at `10–15%` efficiency. |
+
+- **General Research Assignment:** Points go directly to the player's Academia levels.
+- **Special Projects Assignment:** Unlocks new capabilities or modifiers (for ships, ship construction, research, etc.). Relevant field points progress the project; ~10% of irrelevant field points spill over into the player's Academia.
+- **Indirect Research:**
+  - Integrating purchased third-party components into a ship grants research points toward the tech levels used in those components.
+  - Employees with traits like `Curious` (`ALWAYS_PROVIDES_RESEARCH`) passively generate research points regardless of their job.
+
+### Development Pipeline (Designing Components)
+Special projects only unlock a capability "on paper." To use it on a ship, the Development division must take it through:
+```text
+[Special Project] -> [ComponentDesign] -> [ComponentPrototype] -> [Iterations] -> [Integration] -> [Component]
 ```
-for field in nation_academia {
-    if field.final_restricted == world_academia.get(field.name).final {
-        continue;
-    } else if field.final_restricted < world_academia.get(field.name).final {
-        // That function would check IF if the nation can really learn from the world and if so do so
-        field.learn_from(world_academia.get(field.name));
-    } else {
-        // That function would check how much the world can learn from the nation
-        world_academia.get(field.name).learn_from_restricted(field);
-    }
-}
-```
-
-## Player / AI
-
-Each player and AI has its own Academia level.
-They come after a specific nation Academia level.
-
-They interact with their respective Academia parent as `nations` do with `world` Academia.
-
-Important: They too can restrict their fields.
-(Or at least try to) -> Events / Espionage etc.
-
-# How Research Works for the Player
-
-The player can create a R&D division.
-It will be split into two parts, a research division and a development division.
-
-The 'basic' building block will be a team.
-
-## Research
-
-Driven by characters as much as possible. 
-
-Each team will iterate through its members and add together their points for each field (using their `StatBox`es).
-It then can add its own modifiers to the sums.
-
-Each team will be able to work in one of three modes:
-
-1. General
-2. Specialised
-3. Focused
-
-Each mode will change how the sums calculated are further modified.
-
-### General Research
-
-Team may focus on personal interests / hobbies.
-
-Gives small bonuses to team members (satisfaction, happiness, etc.).
-
-The calculated sums are passed along without modification.
-
-### Specialised Research
-
-Team must focus on a specific field / Task.
-
-No bonuses or maluses to members.
-
-The calculated sums are scaled; 10-20% of the 'wanted' fields (fields that are priortised by the team or the assigned special project), and a 20-30% reduction in irrelevant fields.
-
-### Focused Research
-
-Team must grind the specific field / Task.
-
-Members get maluses to their stats.
-These should stack! E.g. just add the same malus as a modifier to the statbox over and over (timed of course).
-
-All output of irrelevant fields is converted to the 'wanted' fields with a 10-15% efficiency.
-All output of relevant fields is scaled by at a generous 30%.
-
-### Special Projects
-
-Will unlock capabilites / modifiers. Some for ships, some for constructing ships, some for research, etc.
-
-Will need a specific kind of resource / research point kinds to progress them.
-
-When points are generated for irrelevant fields, about 10% of these points are added to the players academia level relevant.
-
-### General Research
-
-The team produces points that go straight to the player's academia level.
-
-Maybe a flat 10% bonus to all or something.
-
-## Player Interaction
-
-### Indirect by doing things
-
-When integrating purchased components into a ship, the player gets points for the components (well the tech levels used in them).
-
-Some employees may have traits that allow them to passively generate points whatever their occupation.
-
-### Direct via R&D-Division
-
-#### Development
-
-## Designing (part of Development)
-
-On its own special projects only exist 'on paper'. The player will need to design components to include the capability unlocked by the special project.
-
-[Special Project]->[ComponentDesign]->[ComponentPrototype]->[Iterations]->[Integration]->[Component]
-
-# Field Interdependence
-
-Fields are organised into tiers.
-
-- Tier 0: Logic
-- Tier 1: Formal
-- Tier 2: Natural & Social
-- Tier 3: Applied
-- Tier 4: Disciplines
-- Tier 5: Sub-Disciplines
-
-Each tier is made up of a sub-set of the tier above. These parents provide a soft cap for the tier below.
-
-Should a tier 3 field be behind a tier 2 field, the tier 3 field gets a bonus on its growth.
-Should the tier 3 field be ahead of a tier 2 field, the tier 3 field gets a malus on its growth.
-
-The cap is scaling with how much behind / ahead the fields are relative to each other.
-
-In general the player would only ever really interact with tier 3+ fields.
-Most interaction would be with tier 4+ fields.
-
-## Tier 0, 1 & 2
-
-These are somewhat special tiers.
-
-They are intended to be the anchor to keep the levels of the rest of the fields in check.
-They should largely stay around 'base' (current_year) levels.
-They should also not differ largely between nations, nor have restrictions.
+The tech levels (years) of the relevant research fields at design time determine both the available special projects and the base values of the resulting component.

@@ -1,15 +1,12 @@
-use std::path::Path;
-
 use aequa::Object;
 use athena::{float::HpFloat, slot_map::SlotMap};
 use horae::Utc;
-use tyche::RngApi;
 
 use crate::{
     consts::characters::traits::{
         CharacterTrait, CharacterTraitKind, registries::get_trait_from_registry_by_name,
     },
-    error::{SSCCResult, new_character_error, new_generation_error},
+    error::{SSCCResult, new_character_error},
     modules::character::{
         name::CharacterName,
         skill::{CharacterSkill, CharacterSkillRegistryId},

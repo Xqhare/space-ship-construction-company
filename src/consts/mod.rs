@@ -1,4 +1,10 @@
-use crate::consts::base_values::science::{SCI_BONUS_ALL_FIELDS, SCI_REGISTRY_OF_REGISTRIES};
+use crate::consts::{
+    base_values::{
+        SOC_BONUS_ALL,
+        science::{SCI_BONUS_ALL_FIELDS, SCI_REGISTRY_OF_REGISTRIES},
+    },
+    characters::skills::registries::social::SKILL_SOCIAL_REGISTRY,
+};
 
 pub mod base_values;
 pub mod characters;
@@ -21,6 +27,11 @@ pub fn normalise_bvp_name(bvp_name: &'static str) -> Vec<&'static str> {
         SCI_REGISTRY_OF_REGISTRIES
             .iter()
             .flat_map(|reg| reg.iter().map(|field| field.name))
+            .collect()
+    } else if bvp_name == SOC_BONUS_ALL.0 {
+        SKILL_SOCIAL_REGISTRY
+            .iter()
+            .map(|entry| entry.name)
             .collect()
     } else {
         vec![bvp_name]

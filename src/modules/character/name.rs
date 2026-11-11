@@ -5,11 +5,11 @@ use crate::{error::SSCCResult, utils::Utils};
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct CharacterName {
-    legal_name: String,
-    first_name: String,
-    middle_name: Option<String>,
-    last_name: String,
-    nick_name: String,
+    pub legal_name: String,
+    pub first_name: String,
+    pub middle_name: Option<String>,
+    pub last_name: String,
+    pub nick_name: String,
 }
 
 impl CharacterName {
