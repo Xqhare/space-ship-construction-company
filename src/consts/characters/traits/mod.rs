@@ -27,7 +27,9 @@ pub const MAX_CHARACTER_TRAIT_SKILL_IMPACTS: usize = 4;
 
 pub const MAX_CHARACTER_FLAGS: usize = 8;
 
-pub const MAX_CONFLICTING_TRAIT_COUNT: usize = 4;
+pub const MAX_CHARACTER_CONFLICTING_TRAIT_COUNT: usize = 4;
+
+pub const MAX_CHARACTER_TRAIT_AFFINITY_TARGETS: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharacterTraitKind {
@@ -39,18 +41,53 @@ pub enum CharacterTraitKind {
     WorkEthics,
     Normal,
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AffinityTarget {
+    /// (Internal Use) None - Should not be used for defining a real AffinityTarget. Will cause errors if
+    /// used.
+    None,
+    /// Applies to a specific skill by name (e.g. SKILL_SOCIAL_LYING.name)
+    Skill(&'static str),
+    /// Applies to any skill whose master or secondary impacts this base value
+    /// (supports group keys like SCI_BONUS_ALL_FIELDS.0 via normalise_bvp_name!)
+    BaseValue(&'static str),
+    /// Applies to every skill (e.g. Genius, Quick Learner, Simpleton)
+    AllSkills,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TraitAffinityImpact {
+    pub target: AffinityTarget,
+    /// The range for *all* affinities added together should be 0.0..1.0 (Upper limit
+    /// soft-capped)
+    pub delta: f32,
+}
+
+impl TraitAffinityImpact {
+    pub const fn const_default() -> TraitAffinityImpact {
+        TraitAffinityImpact {
+            target: AffinityTarget::None,
+            delta: 0.0,
+        }
+    }
+    pub const fn new(target: AffinityTarget, delta: f32) -> TraitAffinityImpact {
+        TraitAffinityImpact { target, delta }
+    }
+}
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
 pub struct CharacterTrait {
     pub name: &'static str,
     pub kind: CharacterTraitKind,
+    active_affinity_target_count: usize,
+    affinity_targets: [TraitAffinityImpact; MAX_CHARACTER_TRAIT_AFFINITY_TARGETS],
     active_pairs_count: usize,
     affected_base_value_pairs: [TraitStatImpact; MAX_CHARACTER_TRAIT_SKILL_IMPACTS],
     active_flags_count: usize,
     flags: [&'static str; MAX_CHARACTER_FLAGS],
     active_conflicting_trait_count: usize,
-    conflicting_traits: [&'static str; MAX_CONFLICTING_TRAIT_COUNT],
+    conflicting_traits: [&'static str; MAX_CHARACTER_CONFLICTING_TRAIT_COUNT],
 }
 
 impl PartialEq for CharacterTrait {
@@ -87,13 +124,16 @@ impl CharacterTrait {
         CharacterTrait {
             name,
             kind,
+            active_affinity_target_count: 0,
+            affinity_targets: [TraitAffinityImpact::const_default();
+                MAX_CHARACTER_TRAIT_AFFINITY_TARGETS],
             active_pairs_count: 0,
             affected_base_value_pairs: [TraitStatImpact::const_default();
                 MAX_CHARACTER_TRAIT_SKILL_IMPACTS],
             active_flags_count: 0,
             flags: [""; MAX_CHARACTER_FLAGS],
             active_conflicting_trait_count: 0,
-            conflicting_traits: [""; MAX_CONFLICTING_TRAIT_COUNT],
+            conflicting_traits: [""; MAX_CHARACTER_CONFLICTING_TRAIT_COUNT],
         }
     }
     pub const fn with_impacts<const N: usize>(
@@ -130,7 +170,7 @@ impl CharacterTrait {
     ) -> CharacterTrait {
         // This should only be ever called at compile time; no runtime panics possible
         assert!(
-            O <= MAX_CONFLICTING_TRAIT_COUNT,
+            O <= MAX_CHARACTER_CONFLICTING_TRAIT_COUNT,
             "Trait has too many conflicting traits"
         );
         let mut i = 0;
@@ -140,6 +180,25 @@ impl CharacterTrait {
         }
         self.active_conflicting_trait_count = O;
         self
+    }
+    pub const fn with_affinities<const P: usize>(
+        mut self,
+        affinities: [TraitAffinityImpact; P],
+    ) -> CharacterTrait {
+        assert!(
+            P <= MAX_CHARACTER_TRAIT_AFFINITY_TARGETS,
+            "Trait has too many affinities defined!"
+        );
+        let mut i = 0;
+        while i < P {
+            self.affinity_targets[i] = affinities[i];
+            i += 1;
+        }
+        self.active_affinity_target_count = P;
+        self
+    }
+    pub fn affinities(&self) -> &[TraitAffinityImpact] {
+        &self.affinity_targets[..self.active_affinity_target_count]
     }
     pub fn affected_base_value_pairs(&self) -> &[TraitStatImpact] {
         &self.affected_base_value_pairs[..self.active_pairs_count]

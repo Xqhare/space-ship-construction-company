@@ -1,10 +1,10 @@
-use crate::consts::characters::skills::ConstSkill;
+use crate::consts::characters::skills::{ConstSkill, registries::social::SKILL_SOCIAL_REGISTRY};
 
 pub mod social;
 
-pub static SKILL_REGISTRY_OF_REGISTRIES: [&[&ConstSkill]; 0] = [];
+pub static SKILL_REGISTRY_OF_REGISTRIES: [&[&ConstSkill]; 1] = [SKILL_SOCIAL_REGISTRY];
 
-pub fn get_trait_from_registry_by_name(trait_name: &str) -> Option<&'static ConstSkill> {
+pub fn get_skill_from_registry_by_name(trait_name: &str) -> Option<&'static ConstSkill> {
     SKILL_REGISTRY_OF_REGISTRIES
         .iter()
         .flat_map(|reg| reg.iter())
@@ -28,33 +28,26 @@ pub fn get_master_skill_for_base_value(base_value_name: &str) -> Option<&'static
         })
 }
 
-// TODO: Consider return type. Needs to be dynamically sized I think; Would be awesome if I didn't
-// need to heap-alloc an output vec
-pub fn get_secondary_skills_for_base_value(base_value_name: &str) -> Vec<&'static ConstSkill> {
+pub fn get_secondary_skills_for_base_value<'a>(
+    base_value_name: &'a str,
+) -> impl Iterator<Item = &'static ConstSkill> + 'a {
     SKILL_REGISTRY_OF_REGISTRIES
         .iter()
         .flat_map(|reg| reg.iter())
         .copied()
-        .filter_map(|entry| {
-            if entry
+        .filter(move |entry| {
+            entry
                 .secondary_skills()
                 .iter()
-                .any(|entry| entry.base_value_name == base_value_name)
-            {
-                Some(entry)
-            } else {
-                None
-            }
+                .any(|sec| sec.base_value_name == base_value_name)
         })
-        .collect()
 }
 
-pub fn get_all_affecting_skills_from_registry(base_value_name: &str) -> Vec<&'static ConstSkill> {
-    let mut out = get_secondary_skills_for_base_value(base_value_name);
-    if let Some(master) = get_master_skill_for_base_value(base_value_name) {
-        out.push(master);
-    }
-    out
+pub fn get_all_affecting_skills_from_registry<'a>(
+    base_value_name: &'a str,
+) -> impl Iterator<Item = &'static ConstSkill> + 'a {
+    get_secondary_skills_for_base_value(base_value_name)
+        .chain(get_master_skill_for_base_value(base_value_name))
 }
 
 #[cfg(test)]

@@ -2,14 +2,16 @@ use std::cmp::Ordering;
 
 use athena::float::HpFloat;
 use fortuna::Fortuna;
+use nemesis::NemesisResultExt;
 use tyche::RngApi;
 
-use crate::error::SSCCResult;
+use crate::error::{SSCCResult, new_internal_error};
 
-#[derive(Debug, Clone, Copy)]
+// NOTE: Rust derives PartialOrd/Ord on enums in variant declaration order (Low < Medium < High < Ultra) and then compares the inner u8
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// All inner `u8` values must be `< LEVEL_AMOUNT_*` for their tier.
 ///
-/// Implements `PartialEq` and `PartialOrd`
+/// Implements `Eq` and `Ord`
 pub enum Level {
     Low(u8),
     Medium(u8),
@@ -18,156 +20,76 @@ pub enum Level {
 }
 
 impl Level {
-    // NOTE: Performance will be not as good as a dedicated match (as in `level_up()`) and
-    // flipping the call chain for level_up to call level_up_by(1)
-    pub fn level_up_by(&self, amount: usize) -> Level {
-        let mut tmp = *self;
-        for _ in 0..amount {
-            tmp = tmp.level_up()
+    /// Cast the level into the range 0..TOTAL_SKILL_LEVEL_AMOUNT
+    pub fn to_ordinal(&self) -> u8 {
+        match self {
+            Level::Low(level) => *level,
+            Level::Medium(level) => level.saturating_add(SKILL_LEVEL_LOW_AMOUNT as u8),
+            Level::High(level) => level
+                .saturating_add(SKILL_LEVEL_LOW_AMOUNT as u8)
+                .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT as u8),
+            Level::Ultra(level) => level
+                .saturating_add(SKILL_LEVEL_LOW_AMOUNT as u8)
+                .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT as u8)
+                .saturating_add(SKILL_LEVEL_HIGH_AMOUNT as u8),
         }
-        tmp
     }
-    // NOTE: Performance will be not as good as a dedicated match (as in `level_down()`) and
-    // flipping the call chain for level_down to call level_down_by(1)
-    pub fn level_down_by(&self, amount: usize) -> Level {
-        let mut tmp = *self;
-        for _ in 0..amount {
-            tmp = tmp.level_down()
+    // TODO: As nice as range.contains is; there is probably a nicer & better way
+    /// Normalises any passed in `ordinal` that is larger than the expected maximum value to
+    /// the maximum Skill level.
+    ///
+    /// For intended behaviour, always pair with [`Level::to_ordinal`]
+    pub fn from_ordinal(ordinal: u8) -> Level {
+        if (0..SKILL_LEVEL_LOW_AMOUNT).contains(&(ordinal as usize)) {
+            Level::Low(ordinal)
+        } else if (SKILL_LEVEL_LOW_AMOUNT
+            ..SKILL_LEVEL_LOW_AMOUNT.saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT))
+            .contains(&(ordinal as usize))
+        {
+            Level::Medium(ordinal.saturating_sub(SKILL_LEVEL_LOW_AMOUNT as u8))
+        } else if (SKILL_LEVEL_LOW_AMOUNT.saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
+            ..SKILL_LEVEL_LOW_AMOUNT
+                .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
+                .saturating_add(SKILL_LEVEL_HIGH_AMOUNT))
+            .contains(&(ordinal as usize))
+        {
+            Level::High(
+                ordinal
+                    .saturating_sub(SKILL_LEVEL_LOW_AMOUNT as u8)
+                    .saturating_sub(SKILL_LEVEL_MEDIUM_AMOUNT as u8),
+            )
+        } else if (SKILL_LEVEL_LOW_AMOUNT
+            .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
+            .saturating_add(SKILL_LEVEL_HIGH_AMOUNT)
+            ..SKILL_LEVEL_LOW_AMOUNT
+                .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
+                .saturating_add(SKILL_LEVEL_HIGH_AMOUNT)
+                .saturating_add(SKILL_LEVEL_ULTRA_AMOUNT))
+            .contains(&(ordinal as usize))
+        {
+            Level::Ultra(
+                ordinal
+                    .saturating_sub(SKILL_LEVEL_LOW_AMOUNT as u8)
+                    .saturating_sub(SKILL_LEVEL_MEDIUM_AMOUNT as u8)
+                    .saturating_sub(SKILL_LEVEL_HIGH_AMOUNT as u8),
+            )
+        } else {
+            Level::Ultra(SKILL_LEVEL_ULTRA_AMOUNT.saturating_sub(1) as u8)
         }
-        tmp
+    }
+    pub fn level_up_by(&self, amount: u8) -> Level {
+        let ordinal = self.to_ordinal();
+        Level::from_ordinal(ordinal.saturating_add(amount))
+    }
+    pub fn level_down_by(&self, amount: u8) -> Level {
+        let ordinal = self.to_ordinal();
+        Level::from_ordinal(ordinal.saturating_sub(amount))
     }
     pub fn level_up(&self) -> Level {
-        match self {
-            Level::Low(level) => {
-                let new_level = level + 1;
-                if (new_level as usize) < SKILL_LEVEL_LOW_AMOUNT {
-                    Level::Low(new_level)
-                } else {
-                    Level::Medium(0)
-                }
-            }
-            Level::Medium(level) => {
-                let new_level = level + 1;
-                if (new_level as usize) < SKILL_LEVEL_MEDIUM_AMOUNT {
-                    Level::Medium(new_level)
-                } else {
-                    Level::High(0)
-                }
-            }
-            Level::High(level) => {
-                let new_level = level + 1;
-                if (new_level as usize) < SKILL_LEVEL_HIGH_AMOUNT {
-                    Level::High(new_level)
-                } else {
-                    Level::Ultra(0)
-                }
-            }
-            Level::Ultra(level) => {
-                let new_level = level + 1;
-                if (new_level as usize) < SKILL_LEVEL_LOW_AMOUNT {
-                    Level::Ultra(new_level)
-                } else {
-                    *self
-                }
-            }
-        }
+        self.level_up_by(1)
     }
     pub fn level_down(&self) -> Level {
-        match self {
-            Level::Low(level) => {
-                if *level == 0 {
-                    *self
-                } else {
-                    Level::Low(level - 1)
-                }
-            }
-            Level::Medium(level) => {
-                if *level == 0 {
-                    Level::Low(SKILL_LEVEL_LOW_AMOUNT as u8 - 1)
-                } else {
-                    Level::Medium(level - 1)
-                }
-            }
-            Level::High(level) => {
-                if *level == 0 {
-                    Level::Medium(SKILL_LEVEL_MEDIUM_AMOUNT as u8 - 1)
-                } else {
-                    Level::High(level - 1)
-                }
-            }
-            Level::Ultra(level) => {
-                if *level == 0 {
-                    Level::High(SKILL_LEVEL_HIGH_AMOUNT as u8 - 1)
-                } else {
-                    Level::Ultra(level - 1)
-                }
-            }
-        }
-    }
-}
-
-impl PartialEq for Level {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            Level::Low(level) => match other {
-                Level::Low(other_level) => level.eq(other_level),
-                Level::Medium(_other_level) => false,
-                Level::High(_other_level) => false,
-                Level::Ultra(_other_level) => false,
-            },
-            Level::Medium(level) => match other {
-                Level::Low(_other_level) => false,
-                Level::Medium(other_level) => level.eq(other_level),
-                Level::High(_other_level) => false,
-                Level::Ultra(_other_level) => false,
-            },
-            Level::High(level) => match other {
-                Level::Low(_other_level) => false,
-                Level::Medium(_other_level) => false,
-                Level::High(other_level) => level.eq(other_level),
-                Level::Ultra(_other_level) => false,
-            },
-            Level::Ultra(level) => match other {
-                Level::Low(_other_level) => false,
-                Level::Medium(_other_level) => false,
-                Level::High(_other_level) => false,
-                Level::Ultra(other_level) => level.eq(other_level),
-            },
-        }
-    }
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
-    }
-}
-
-impl PartialOrd for Level {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self {
-            Level::Low(level) => match other {
-                Level::Low(other_level) => level.partial_cmp(other_level),
-                Level::Medium(_other_level) => Some(Ordering::Less),
-                Level::High(_other_level) => Some(Ordering::Less),
-                Level::Ultra(_other_level) => Some(Ordering::Less),
-            },
-            Level::Medium(level) => match other {
-                Level::Low(_other_level) => Some(Ordering::Greater),
-                Level::Medium(other_level) => level.partial_cmp(other_level),
-                Level::High(_other_level) => Some(Ordering::Less),
-                Level::Ultra(_other_level) => Some(Ordering::Less),
-            },
-            Level::High(level) => match other {
-                Level::Low(_other_level) => Some(Ordering::Greater),
-                Level::Medium(_other_level) => Some(Ordering::Greater),
-                Level::High(other_level) => level.partial_cmp(other_level),
-                Level::Ultra(_other_level) => Some(Ordering::Less),
-            },
-            Level::Ultra(level) => match other {
-                Level::Low(_other_level) => Some(Ordering::Greater),
-                Level::Medium(_other_level) => Some(Ordering::Greater),
-                Level::High(_other_level) => Some(Ordering::Greater),
-                Level::Ultra(other_level) => level.partial_cmp(other_level),
-            },
-        }
+        self.level_down_by(1)
     }
 }
 

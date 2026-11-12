@@ -1,17 +1,14 @@
 use athena::float::HpFloat;
 
-use crate::{
-    consts::characters::{
+use crate::consts::{
+    characters::{
         skills::{
             ConstSkill,
-            levels::{
-                Level, SKILL_LEVEL_TOTAL_AMOUNT, SKILL_LEVEL_ULTRA_AMOUNT,
-                calc_final_point_cost_for_level,
-            },
+            levels::{Level, SKILL_LEVEL_TOTAL_AMOUNT, calc_final_point_cost_for_level},
         },
-        traits::CharacterTrait,
+        traits::{AffinityTarget, CharacterTrait},
     },
-    modules::modifier::r#type::ModifierType,
+    normalise_bvp_name,
 };
 
 pub type CharacterSkillRegistryId = usize;
@@ -66,8 +63,21 @@ impl CharacterSkill {
             self.lost_rust_this_sim_tick = true;
         }
     }
-    pub fn level_up_immediately(&mut self) {}
-    pub fn set_level(&mut self, new_level: Level) {}
+    pub fn level_up_immediately(&mut self) {
+        self.reset_current_level();
+        self.level = self.level.level_up();
+    }
+    /// Resets the progress of the current level to 0 across the board.
+    pub fn reset_current_level(&mut self) {
+        self.points = HpFloat::new_zero();
+        self.lost_rust_this_sim_tick = true;
+        self.rust = 0;
+        self.unused_counter = 0;
+    }
+    pub fn set_level(&mut self, new_level: Level) {
+        self.reset_current_level();
+        self.level = new_level;
+    }
     /// Hard reset the rust subsystem.
     ///
     /// Consider using [`CharacterSkill::skill_used`] if applicable.
@@ -77,7 +87,7 @@ impl CharacterSkill {
         self.lost_rust_this_sim_tick = false;
     }
     pub fn is_rusty(&self) -> bool {
-        if self.rust == 0 { true } else { false }
+        if self.rust == 0 { false } else { true }
     }
     pub fn level(&self) -> &Level {
         &self.level
@@ -85,64 +95,40 @@ impl CharacterSkill {
     pub fn affinity(&self) -> &HpFloat {
         &self.affinity
     }
-    // TODO: See comment
     fn calc_affinity(&self, traits: &[&'static CharacterTrait]) -> HpFloat {
         let mut tmp = HpFloat::new_zero();
         for tr in traits.iter() {
-            for impact in tr.affected_base_value_pairs() {
-                // Well this is some kind of bs.
-                // Either I add an affinity field to impact OR I come up with an actual
-                // system of normalising master & secondary skills into affinity.
-                //
-                // Issue: Take 'Genius' with no master skill; This would add very little
-                // affinity to each skill affected by the trait. Not desirable
-                //
-                // # Option 1:
-                // Add a affinity field to CharacterTrait.
-                // Probably as a `Vec<(base_value_name, affinity)>` (`Vec<&'static str,
-                // HpFloat`)
-                //
-                // Then just normalise the base_name and add affinity to the total.
-                //
-                // Pro: Simple
-                // Con: Little flexibility
-                //
-                // # Option 2:
-                // Add a new field of type `[TraitAffinityImpact; MAX_AFF_IMPACTS]`.
-                //
-                // ```
-                //#[derive(Debug, Clone, Copy)]
-                //   pub struct TraitAffinityImpact {
-                //       pub base_value_name: &'static str,
-                //       pub affinity: f32,
-                //       pub kind: ModifierType,
-                //       pub op: Op,
-                //   }
-                // ```
-                //
-                // The `kind` field (copied from TraitSkillImpact) could just be lost; Or
-                // replaced with some other kind for more flexibility in defining
-                // affinites on traits
-                //
-                // # Option 3:
-                // Stick largely with the solution in code (differentiating between master
-                // and secondary skills); Feels very band-aid-y to me though.
-                if let Some(master) = self.skill.master
-                    && master.base_value_name == impact.base_value_name
-                {
-                    match impact.kind {
-                        ModifierType::Flat => tmp = tmp + impact.base_value_value,
-                        ModifierType::Percentage => tmp = tmp + (impact.base_value_value * 100.0),
+            for affinity in tr.affinities() {
+                match affinity.target {
+                    AffinityTarget::None => {
+                        debug_assert!(
+                            false,
+                            "Affinity with no defined affinity target encountered!\nTrait: {tr:?}; Affinity: {affinity:?}"
+                        )
                     }
-                }
-                for secondaty in self.skill.secondary_skills() {
-                    if secondaty.base_value_name == impact.base_value_name {
-                        match impact.kind {
-                            ModifierType::Flat => tmp = tmp + (impact.base_value_value / 4.0),
-                            ModifierType::Percentage => {
-                                tmp = tmp + ((impact.base_value_value * 100.0) / 4.0)
+                    AffinityTarget::Skill(skill_name) => {
+                        if skill_name == self.skill.name {
+                            tmp = tmp + affinity.delta;
+                        }
+                    }
+                    AffinityTarget::BaseValue(bv_name) => {
+                        let normalised_bv_names = normalise_bvp_name(bv_name);
+                        for name in normalised_bv_names {
+                            if let Some(master) = self.skill.master {
+                                if master.base_value_name == name {
+                                    tmp = tmp + (affinity.delta * 1.0);
+                                }
+                            } else {
+                                for secondary in self.skill.secondary_skills() {
+                                    if secondary.base_value_name == name {
+                                        tmp = tmp + (affinity.delta * 0.25);
+                                    }
+                                }
                             }
                         }
+                    }
+                    AffinityTarget::AllSkills => {
+                        tmp = tmp + affinity.delta;
                     }
                 }
             }
@@ -167,7 +153,7 @@ fn scale_affinity_for_rust(affinity: HpFloat) -> HpFloat {
 fn calc_max_rust_for_affinity(affinity: HpFloat) -> u8 {
     let tmp = HpFloat::new(SKILL_LEVEL_TOTAL_AMOUNT as i128, 0) - scale_affinity_for_rust(affinity);
     let tmp = tmp.get_integer_part();
-    debug_assert!(tmp > 0, "Negative rust! '{tmp}'");
-    debug_assert!(tmp <= 256, "Over u8::MAX rust! '{tmp}'");
+    debug_assert!(tmp >= 0, "Negative rust! '{tmp}'");
+    debug_assert!(tmp <= 255, "Over u8::MAX rust! '{tmp}'");
     if tmp < 0 || tmp > 256 { 0 } else { tmp as u8 }
 }

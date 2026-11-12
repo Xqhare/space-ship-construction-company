@@ -3,7 +3,7 @@ use crate::consts::{
     characters::{
         base_values::SOCIABILITY,
         flags::{ALWAYS_PROVIDES_ALL, ALWAYS_PROVIDES_RESEARCH},
-        traits::{CharacterTrait, impact::TraitStatImpact},
+        traits::{AffinityTarget, CharacterTrait, TraitAffinityImpact, impact::TraitStatImpact},
     },
 };
 
@@ -14,6 +14,10 @@ define_trait_registry! {
             .with_impacts([
                 TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, 7.5),
                 TraitStatImpact::new(SOCIABILITY.0, -10.0),
+            ])
+            .with_affinities([
+                TraitAffinityImpact::new(AffinityTarget::AllSkills, 0.33),
+                TraitAffinityImpact::new(AffinityTarget::BaseValue(SCI_BONUS_ALL_FIELDS.0), 0.5)
             ])
             .with_flags([ALWAYS_PROVIDES_ALL]),
         TRAIT_INTELLECT_SHREWD => CharacterTrait::intellect("Shrewd")
@@ -39,6 +43,7 @@ define_trait_registry! {
         TRAIT_INTELLECT_DULL => CharacterTrait::intellect("Dull")
             .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -1.5)]),
         TRAIT_INTELLECT_DIMWIT => CharacterTrait::intellect("Dimwit")
-            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -5.0)]),
+            .with_impacts([TraitStatImpact::new_flat(SCI_BONUS_ALL_FIELDS.0, -5.0)])
+            .with_affinities([TraitAffinityImpact::new(AffinityTarget::AllSkills, -0.33)]),
     ];
 }
