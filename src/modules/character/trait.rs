@@ -1,8 +1,18 @@
 use athena::float::HpFloat;
+use tyche::RngApi;
 
 use crate::{
-    consts::characters::traits::{CharacterTrait, CharacterTraitKind},
+    consts::characters::traits::{
+        CharacterTrait, CharacterTraitKind,
+        registries::{
+            TRAIT_NORMAL_REGISTRY, health::TRAIT_HEALTH_REGISTRY,
+            mental_health::TRAIT_MENTAL_HEALTH_REGISTRY, social::TRAIT_SOCIAL_REGISTRY,
+            work_ethics::TRAIT_WORK_ETHIC_REGISTRY,
+        },
+    },
+    error::SSCCResult,
     needs_home::accum_char_traits,
+    utils::Utils,
 };
 
 pub struct CharacterTraitStore {
@@ -16,6 +26,82 @@ pub struct CharacterTraitStore {
 }
 
 impl CharacterTraitStore {
+    pub fn new_random(
+        utils: &mut Utils,
+        intellect: &'static CharacterTrait,
+        looks: &'static CharacterTrait,
+    ) -> SSCCResult<CharacterTraitStore> {
+        let mut store = CharacterTraitStore {
+            intellect,
+            looks,
+            health: None,
+            mental_health: None,
+            social: None,
+            work_ethic: None,
+            normal_traits: Vec::new(),
+        };
+        if utils
+            .rng
+            .random_bool()
+            .map_err(|err| err.to_nemesis_error())?
+        {
+            let _ = store.add_trait(
+                TRAIT_HEALTH_REGISTRY[utils
+                    .rng
+                    .random_index(TRAIT_HEALTH_REGISTRY.len())
+                    .map_err(|err| err.to_nemesis_error())?],
+            );
+        }
+        if utils
+            .rng
+            .random_bool()
+            .map_err(|err| err.to_nemesis_error())?
+        {
+            let _ = store.add_trait(
+                TRAIT_MENTAL_HEALTH_REGISTRY[utils
+                    .rng
+                    .random_index(TRAIT_MENTAL_HEALTH_REGISTRY.len())
+                    .map_err(|err| err.to_nemesis_error())?],
+            );
+        }
+        if utils
+            .rng
+            .random_bool()
+            .map_err(|err| err.to_nemesis_error())?
+        {
+            let _ = store.add_trait(
+                TRAIT_SOCIAL_REGISTRY[utils
+                    .rng
+                    .random_index(TRAIT_SOCIAL_REGISTRY.len())
+                    .map_err(|err| err.to_nemesis_error())?],
+            );
+        }
+        if utils
+            .rng
+            .random_bool()
+            .map_err(|err| err.to_nemesis_error())?
+        {
+            let _ = store.add_trait(
+                TRAIT_WORK_ETHIC_REGISTRY[utils
+                    .rng
+                    .random_index(TRAIT_WORK_ETHIC_REGISTRY.len())
+                    .map_err(|err| err.to_nemesis_error())?],
+            );
+        }
+        let normal_trait_amount = utils
+            .rng
+            .random_from_range_inclusive(1, 4)
+            .map_err(|err| err.to_nemesis_error())?;
+        for _ in 0..normal_trait_amount {
+            let _ = store.add_trait(
+                TRAIT_NORMAL_REGISTRY[utils
+                    .rng
+                    .random_index(TRAIT_NORMAL_REGISTRY.len())
+                    .map_err(|err| err.to_nemesis_error())?],
+            );
+        }
+        Ok(store)
+    }
     pub fn remove_trait(&mut self, character_trait: &'static CharacterTrait) {
         if self.has_trait(character_trait.name) {
             match character_trait.kind {

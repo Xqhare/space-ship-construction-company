@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aequa"
 version = "1.3.1"
-source = "git+https://github.com/xqhare/aequa#edb8d9ed24d6421bc6170cd88fd8fe0c293d624f"
+source = "git+https://github.com/xqhare/aequa#045386839a8ab27da593ddbde6c67f6786d1940e"
 dependencies = [
  "nemesis",
 ]
@@ -23,7 +23,7 @@ dependencies = [
 [[package]]
 name = "fortuna"
 version = "2.2.0"
-source = "git+https://github.com/xqhare/fortuna#1f139faa541cb8a5e79c6a86a194af638f2fd120"
+source = "git+https://github.com/xqhare/fortuna#bedbc349aff27df58fe42d54fa11661ec1c6a04d"
 dependencies = [
  "athena",
 ]

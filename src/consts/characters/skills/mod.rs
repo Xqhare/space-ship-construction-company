@@ -1,4 +1,9 @@
-use crate::{consts::EMPTY_BV_PAIR, utils::op::Op};
+use athena::float::HpFloat;
+
+use crate::{
+    consts::{EMPTY_BV_PAIR, characters::skills::levels::Level},
+    utils::op::Op,
+};
 
 macro_rules! define_skill_registry {
     (
@@ -63,6 +68,17 @@ impl ConstSkill {
     pub fn secondary_skills(&self) -> &[SkillStatImpact] {
         &self.secondaries[..self.active_secondaries_count]
     }
+    pub fn all_impacts(&self) -> Vec<SkillStatImpact> {
+        let mut out = if let Some(master) = self.master {
+            let mut tmp = Vec::with_capacity(self.active_secondaries_count + 1);
+            tmp.push(master);
+            tmp
+        } else {
+            Vec::with_capacity(self.active_secondaries_count)
+        };
+        out.extend(self.secondary_skills());
+        out
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -92,5 +108,17 @@ impl SkillStatImpact {
     pub const fn with_op(mut self, op: Op) -> SkillStatImpact {
         self.op = op;
         self
+    }
+    // TODO: Move away from the constant offsets to offsets based on LEVEL_*_AMOUNT
+    pub fn calc_final_stat_impact(&self, aff: &HpFloat, effective_level: Level) -> (HpFloat, Op) {
+        let base_level = match effective_level {
+            Level::Low(inner) => 1 + inner,          // 1..=10
+            Level::Medium(inner) => 12 + inner,      // 12..=21 (jump from 10 -> 12)
+            Level::High(inner) => 25 + inner,        // 25..=34 (jump from 21 -> 25)
+            Level::Ultra(inner) => 50 + (inner * 5), // 50, 55, 60 (massive jump)
+        };
+        let level_factor = HpFloat::cast(base_level) * *aff;
+        let final_factor: HpFloat = self.factor * level_factor;
+        (final_factor, self.op)
     }
 }

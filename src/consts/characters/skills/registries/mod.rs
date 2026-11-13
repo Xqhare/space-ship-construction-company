@@ -4,12 +4,12 @@ pub mod social;
 
 pub static SKILL_REGISTRY_OF_REGISTRIES: [&[&ConstSkill]; 1] = [SKILL_SOCIAL_REGISTRY];
 
-pub fn get_skill_from_registry_by_name(trait_name: &str) -> Option<&'static ConstSkill> {
+pub fn get_skill_from_registry_by_name(skill_name: &str) -> Option<&'static ConstSkill> {
     SKILL_REGISTRY_OF_REGISTRIES
         .iter()
         .flat_map(|reg| reg.iter())
         .copied()
-        .find(|entry| entry.name == trait_name)
+        .find(|entry| entry.name == skill_name)
 }
 
 pub fn get_master_skill_for_base_value(base_value_name: &str) -> Option<&'static ConstSkill> {

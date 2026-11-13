@@ -22,6 +22,20 @@ pub mod durations {
     pub const FORTNIGHT_DUR_SECS: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 }
 
+pub fn get_bvp_by_bv_name(_bvp_name: &'static str) -> ConstBVPair {
+    todo!("Prob a reg of regs like with Skills / traits")
+}
+
+/// Normalise many bvp_names
+pub fn normalise_bvp_names<'a>(bvp_names: &'a [&'static str]) -> Vec<&'static str> {
+    bvp_names
+        .iter()
+        .map(|entry| normalise_bvp_name(entry))
+        .flatten()
+        .collect()
+}
+
+/// Normalise one bvp_name
 pub fn normalise_bvp_name(bvp_name: &'static str) -> Vec<&'static str> {
     if bvp_name == SCI_BONUS_ALL_FIELDS.0 {
         SCI_REGISTRY_OF_REGISTRIES

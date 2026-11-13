@@ -1,11 +1,8 @@
-use std::cmp::Ordering;
-
 use athena::float::HpFloat;
 use fortuna::Fortuna;
-use nemesis::NemesisResultExt;
 use tyche::RngApi;
 
-use crate::error::{SSCCResult, new_internal_error};
+use crate::error::SSCCResult;
 
 // NOTE: Rust derives PartialOrd/Ord on enums in variant declaration order (Low < Medium < High < Ultra) and then compares the inner u8
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -34,48 +31,26 @@ impl Level {
                 .saturating_add(SKILL_LEVEL_HIGH_AMOUNT as u8),
         }
     }
-    // TODO: As nice as range.contains is; there is probably a nicer & better way
     /// Normalises any passed in `ordinal` that is larger than the expected maximum value to
     /// the maximum Skill level.
     ///
     /// For intended behaviour, always pair with [`Level::to_ordinal`]
     pub fn from_ordinal(ordinal: u8) -> Level {
-        if (0..SKILL_LEVEL_LOW_AMOUNT).contains(&(ordinal as usize)) {
-            Level::Low(ordinal)
-        } else if (SKILL_LEVEL_LOW_AMOUNT
-            ..SKILL_LEVEL_LOW_AMOUNT.saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT))
-            .contains(&(ordinal as usize))
-        {
-            Level::Medium(ordinal.saturating_sub(SKILL_LEVEL_LOW_AMOUNT as u8))
-        } else if (SKILL_LEVEL_LOW_AMOUNT.saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
-            ..SKILL_LEVEL_LOW_AMOUNT
-                .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
-                .saturating_add(SKILL_LEVEL_HIGH_AMOUNT))
-            .contains(&(ordinal as usize))
-        {
-            Level::High(
-                ordinal
-                    .saturating_sub(SKILL_LEVEL_LOW_AMOUNT as u8)
-                    .saturating_sub(SKILL_LEVEL_MEDIUM_AMOUNT as u8),
-            )
-        } else if (SKILL_LEVEL_LOW_AMOUNT
-            .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
-            .saturating_add(SKILL_LEVEL_HIGH_AMOUNT)
-            ..SKILL_LEVEL_LOW_AMOUNT
-                .saturating_add(SKILL_LEVEL_MEDIUM_AMOUNT)
-                .saturating_add(SKILL_LEVEL_HIGH_AMOUNT)
-                .saturating_add(SKILL_LEVEL_ULTRA_AMOUNT))
-            .contains(&(ordinal as usize))
-        {
-            Level::Ultra(
-                ordinal
-                    .saturating_sub(SKILL_LEVEL_LOW_AMOUNT as u8)
-                    .saturating_sub(SKILL_LEVEL_MEDIUM_AMOUNT as u8)
-                    .saturating_sub(SKILL_LEVEL_HIGH_AMOUNT as u8),
-            )
-        } else {
-            Level::Ultra(SKILL_LEVEL_ULTRA_AMOUNT.saturating_sub(1) as u8)
-        }
+        let low = SKILL_LEVEL_LOW_AMOUNT as u8;
+        let med = SKILL_LEVEL_MEDIUM_AMOUNT as u8;
+        let high = SKILL_LEVEL_HIGH_AMOUNT as u8;
+        let ultra = SKILL_LEVEL_ULTRA_AMOUNT as u8;
+
+        let Some(rem) = ordinal.checked_sub(low) else {
+            return Level::Low(ordinal);
+        };
+        let Some(rem) = rem.checked_sub(med) else {
+            return Level::Medium(rem);
+        };
+        let Some(rem) = rem.checked_sub(high) else {
+            return Level::High(rem);
+        };
+        Level::Ultra(rem.min(ultra - 1))
     }
     pub fn level_up_by(&self, amount: u8) -> Level {
         let ordinal = self.to_ordinal();
@@ -94,10 +69,10 @@ impl Level {
 }
 
 // NOTE: Because of the per-level cost formula, the distance between tiers should always be COST * 2 at a minimum.
-const POINT_COST_LOW_LEVEL: u16 = 128; // Lets see if this needs to change
-const POINT_COST_MEDIUM_LEVEL: u16 = POINT_COST_LOW_LEVEL * 2;
-const POINT_COST_HIGH_LEVEL: u16 = POINT_COST_MEDIUM_LEVEL * 4;
-const POINT_COST_ULTRA_LEVEL: u16 = POINT_COST_HIGH_LEVEL * 6;
+pub const POINT_COST_LOW_LEVEL: u16 = 128; // Lets see if this needs to change
+pub const POINT_COST_MEDIUM_LEVEL: u16 = POINT_COST_LOW_LEVEL * 2;
+pub const POINT_COST_HIGH_LEVEL: u16 = POINT_COST_MEDIUM_LEVEL * 4;
+pub const POINT_COST_ULTRA_LEVEL: u16 = POINT_COST_HIGH_LEVEL * 6;
 
 /// Formula:
 /// final_points_cost_of_level = round_down((1 + (level / LEVEL_AMOUNT)) * POINT_COST)

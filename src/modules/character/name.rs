@@ -14,7 +14,7 @@ pub struct CharacterName {
 
 impl CharacterName {
     /// Generates a random character name
-    pub fn new(utils: &mut Utils) -> SSCCResult<Self> {
+    pub fn new_random(utils: &mut Utils) -> SSCCResult<Self> {
         let pers = utils
             .word_smith
             .mint_managed_object(&mut utils.rng, MintingObjectType::PeopleObject(vec![], 0))

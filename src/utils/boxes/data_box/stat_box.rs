@@ -115,6 +115,9 @@ impl StatBox {
     pub fn has_base_values(&self) -> bool {
         !self.base_values.is_empty()
     }
+    pub fn get_base_value<S: Into<String>>(&self, base_value_name: S) -> Option<&XffValue> {
+        self.base_values.get(&base_value_name.into())
+    }
     pub fn get_modifiers(&self) -> &Vec<ModifierWithEndUtc> {
         &self.modifiers
     }

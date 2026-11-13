@@ -5,8 +5,13 @@ use athena::float::HpFloat;
 use nemesis::NemesisError;
 
 use crate::{
-    consts::characters::traits::CharacterTrait, error::new_xff_serde_error,
-    modules::modifier::r#type::ModifierType, utils::op::Op,
+    consts::{
+        characters::{ traits::CharacterTrait},
+        normalise_bvp_name,
+    },
+    error::new_xff_serde_error,
+    modules::modifier::r#type::ModifierType,
+    utils::op::Op,
 };
 
 /// A pair of base value name and value
@@ -68,8 +73,9 @@ pub fn accum_char_traits(
             entry
                 .affected_base_value_pairs()
                 .iter()
-                .map(|element| element.base_value_name)
+                .map(|element| normalise_bvp_name(element.base_value_name))
         })
+        .flatten()
         .collect::<HashSet<&'static str>>();
     let mut out = Vec::with_capacity(all_impacted_bv_names.len());
     for impacted_bv_name in all_impacted_bv_names {
