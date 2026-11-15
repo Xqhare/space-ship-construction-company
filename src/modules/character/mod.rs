@@ -9,7 +9,7 @@ use crate::{
     consts::{
         characters::{
             RETIREMENT_AGE,
-            base_values::IQ,
+            base_values::{ALL_CHAR_BASES, IQ, STRENGTH},
             skills::{
                 ConstSkill,
                 levels::{Level, POINT_COST_LOW_LEVEL, SKILL_LEVEL_ULTRA_AMOUNT},
@@ -31,7 +31,7 @@ use crate::{
         r#trait::CharacterTraitStore,
         utils::{
             new_random_char_birthday, new_random_char_iq, new_random_char_look,
-            new_random_char_skills,
+            new_random_char_skills, new_random_char_strength,
         },
     },
     utils::{
@@ -44,10 +44,14 @@ use crate::{
     },
 };
 
+#[cfg(test)]
+pub mod tests;
+
 pub mod name;
 pub mod skill;
 pub mod r#trait;
 pub mod utils;
+pub mod xff;
 
 pub struct Character {
     pub name: CharacterName,
@@ -75,13 +79,30 @@ impl Character {
         let looks = new_random_char_look(utils)?;
         let iq = new_random_char_iq(utils)?;
         character_data_box.stats.add_base_value(IQ.0, &iq.0);
+        character_data_box
+            .stats
+            .add_base_value(STRENGTH.0, &new_random_char_strength(utils)?);
         let traits = CharacterTraitStore::new_random(utils, iq.1, looks)?;
+        for tr in traits.get_all_traits() {
+            for tr_flag in tr.flags() {
+                if !character_data_box.flags.has_flag(*tr_flag) {
+                    character_data_box.flags.add_flag(*tr_flag);
+                }
+            }
+        }
         let name = CharacterName::new_random(utils)?;
         let teams = Vec::new();
         let age_in_years =
             HpFloat::cast((*utc_now - birthday).as_secs()) / 60.0 / 60.0 / 24.0 / 365.2425;
-        let mut char =
-            Character::new_custom(character_data_box_id, traits, vec![], teams, birthday, name);
+        let mut char = Character::new_custom(
+            character_data_box_id,
+            traits,
+            vec![],
+            teams,
+            birthday,
+            name,
+            character_data_box,
+        )?;
         for skill in new_random_char_skills(utils, age_in_years)? {
             char.add_skill(skill, character_data_box, utc_now)?;
         }
@@ -119,7 +140,7 @@ impl Character {
                 .random_from_range(0, SKILL_LEVEL_ULTRA_AMOUNT)
                 .map_err(|err| err.to_nemesis_error())? as u8
         };
-        skill_mut_ptr.set_level(Level::from_ordinal(new_level));
+        skill_mut_ptr.set_level(Level::Ultra(new_level));
         Ok(character)
     }
     pub fn new_custom(
@@ -129,8 +150,23 @@ impl Character {
         teams: Vec<TeamBoxSlotId>,
         birthday: Utc,
         name: CharacterName,
-    ) -> Character {
-        Character {
+        character_data_box: &mut DataBox,
+    ) -> SSCCResult<Character> {
+        for base in ALL_CHAR_BASES {
+            if !character_data_box.is_tracking(base.0) {
+                if let Some(value) = base.1 {
+                    character_data_box
+                        .stats
+                        .add_base_value(base.0, &HpFloat::from(value));
+                } else {
+                    return Err(new_character_error(&format!(
+                        "Missing required char_base '{}'. Define it in `char_data_box.stats` during char creation or define a default value!",
+                        base.0
+                    )));
+                }
+            }
+        }
+        Ok(Character {
             name,
             data_box: character_data_box_id,
             retirement: birthday + Duration::from_hours((RETIREMENT_AGE as u64) * 365 * 24),
@@ -138,7 +174,7 @@ impl Character {
             teams,
             traits,
             skills,
-        }
+        })
     }
     pub fn data_box_flag_box<'sm>(
         &self,
@@ -174,13 +210,15 @@ impl Character {
             let mut tmp_accum: HashMap<&str, Vec<(HpFloat, Op)>> = HashMap::new();
             for skill in self.skills.iter() {
                 for impact in skill.skill.all_impacts() {
-                    if stats.contains_key(impact.base_value_name) {
-                        let impact_factor = impact
-                            .calc_final_stat_impact(skill.affinity(), skill.effective_level());
-                        if let Some(entry) = tmp_accum.get_mut(impact.base_value_name) {
-                            entry.push(impact_factor);
-                        } else {
-                            tmp_accum.insert(impact.base_value_name, vec![impact_factor]);
+                    for bv_name in normalise_bvp_name(impact.base_value_name) {
+                        if stats.contains_key(bv_name) {
+                            let impact_factor = impact
+                                .calc_final_stat_impact(skill.affinity(), skill.effective_level());
+                            if let Some(entry) = tmp_accum.get_mut(bv_name) {
+                                entry.push(impact_factor);
+                            } else {
+                                tmp_accum.insert(bv_name, vec![impact_factor]);
+                            }
                         }
                     }
                 }
@@ -199,16 +237,12 @@ impl Character {
                             Op::Mul => accum = accum * *factor,
                             Op::Div => accum = accum / *factor,
                             Op::Set => {
-                                if let Some(set_value) = set
-                                    && factor > set_value
-                                {
+                                if set.is_none() || Some(factor) > set {
                                     set = Some(factor);
                                 }
                             }
                             Op::Lim => {
-                                if let Some(lim_value) = limit
-                                    && factor > lim_value
-                                {
+                                if limit.is_none() || Some(factor) > limit {
                                     limit = Some(factor);
                                 }
                             }
@@ -248,7 +282,6 @@ impl Character {
         data_box_slot_map: &mut SlotMap<DataBox>,
         used_base_values: Option<&[&'static str]>,
         used_skills: Option<&[&'static str]>,
-        utc_now: &Utc,
     ) -> SSCCResult<()> {
         let character_data_box: &mut DataBox = data_box_slot_map
             .get_mut(self.data_box)
@@ -263,11 +296,12 @@ impl Character {
                     && let Some(used_skill) = self.skills.get_mut(idx)
                 {
                     // Skill exists and needs advancement
+                    used_skill.skill_used();
                     used_skill.add_points(points);
                 } else {
                     // Skill doesnt exist and needs to be added
                     if let Some(needed_skill) = get_skill_from_registry_by_name(used_skill) {
-                        self.add_skill(needed_skill, character_data_box, utc_now)?;
+                        self.add_skill_at_low_zero_level(needed_skill, character_data_box)?;
                     };
                 }
             }
@@ -289,16 +323,23 @@ impl Character {
                 }) && let Some(used_skill) = self.skills.get_mut(idx)
                 {
                     // Skill present and was used
+                    used_skill.skill_used();
                     used_skill.add_points(points);
                 } else {
                     // No skill present / Or no master skill to push
                     if let Some(needed_skill) = get_master_skill_for_base_value(used_bv) {
-                        self.add_skill(needed_skill, character_data_box, utc_now)?;
+                        self.add_skill_at_low_zero_level(needed_skill, character_data_box)?;
                     };
                 }
             }
         }
         Ok(())
+    }
+    /// Call to advance rust on all skills
+    pub fn tick_skills_rust(&mut self) {
+        self.skills
+            .iter_mut()
+            .for_each(|skill| skill.simulation_tick());
     }
     /// Add a trait via its name.
     ///
@@ -357,6 +398,9 @@ impl Character {
         }
         self.traits.force_trait(character_trait);
         self.add_flags(character_trait.flags(), data_box_slot_map);
+        self.skills
+            .iter_mut()
+            .for_each(|entry| entry.update_from_traits(&self.traits.get_all_traits()));
     }
     pub fn remove_trait(
         &mut self,
@@ -375,34 +419,80 @@ impl Character {
                         .remove_flag(*flag);
                 }
                 self.traits.remove_trait(r#trait);
+                self.skills
+                    .iter_mut()
+                    .for_each(|entry| entry.update_from_traits(&self.traits.get_all_traits()));
             }
         }
     }
+    /// Adds a Skill to the character.
+    ///
+    /// The level of the skill will be appropriate for the age & affinity of the character.
+    /// The higer the result, the higher the level.
+    ///
+    /// To add a skill at `Level::Low(0)`, use [`Character::add_skill_at_low_zero_level`]
     pub fn add_skill(
         &mut self,
         skill: &'static ConstSkill,
         character_data_box: &mut DataBox,
         utc_now: &Utc,
     ) -> SSCCResult<()> {
-        let mut skill = CharacterSkill::new(skill, &self.traits.get_all_traits());
+        if self.skills.iter().any(|s| s.skill.name == skill.name) {
+            return Ok(());
+        };
         let age_in_years =
             HpFloat::cast((*utc_now - self.birthday).as_secs()) / 60.0 / 60.0 / 24.0 / 365.2425;
+        self.add_skill_internal(skill, character_data_box, age_in_years)
+    }
+    /// Adds a skill with `Level::Low(0)`.
+    pub fn add_skill_at_low_zero_level(
+        &mut self,
+        skill: &'static ConstSkill,
+        character_data_box: &mut DataBox,
+    ) -> SSCCResult<()> {
+        if self.skills.iter().any(|s| s.skill.name == skill.name) {
+            return Ok(());
+        };
+        // NOTE: uses `-1` (any negative) as a magic number to skip
+        // leveling the skill up
+        self.add_skill_internal(skill, character_data_box, HpFloat::from(-1.0))
+    }
+    /// # Note
+    ///
+    /// Passing in any negative value for `age_in_years` skips the level construction based on
+    /// age.
+    fn add_skill_internal(
+        &mut self,
+        skill: &'static ConstSkill,
+        character_data_box: &mut DataBox,
+        age_in_years: HpFloat,
+    ) -> SSCCResult<()> {
+        if self.skills.iter().any(|s| s.skill.name == skill.name) {
+            return Ok(());
+        };
+        let mut skill = CharacterSkill::new(skill, &self.traits.get_all_traits());
         if let Some(iq) = character_data_box.stats.get_base_value(IQ.0)
             && let Some(iq) = iq.as_hp_float()
+            && age_in_years.is_positive()
         {
             skill.normalise_char_skill_from_char(*iq, age_in_years);
         };
         for impact in skill.skill.all_impacts() {
             for bv_name in normalise_bvp_name(impact.base_value_name) {
-                if !character_data_box.stats.is_tracking(bv_name) {
-                    if let Some(bv_value) = get_bvp_by_bv_name(bv_name).1 {
-                        character_data_box
-                            .stats
-                            .add_base_value(bv_name, &bv_value.into());
-                    }
+                if !character_data_box.stats.is_tracking(bv_name)
+                    && let Some(bv_value) = get_bvp_by_bv_name(bv_name)
+                        .ok_or(new_character_error(&format!(
+                            "Cannot get base_value_pair by name. Name: {bv_name}"
+                        )))?
+                        .1
+                {
+                    character_data_box
+                        .stats
+                        .add_base_value(bv_name, &bv_value.into());
                 }
             }
         }
+        self.skills.push(skill);
         Ok(())
     }
 }

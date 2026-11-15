@@ -5,7 +5,9 @@
 
 pub mod science;
 
-use crate::consts::ConstBVPair;
+use crate::consts::{ConstBVPair, characters::base_values::ALL_CHAR_BASES};
+
+pub const REGISTRY_OF_BASE_VALUE_REGISTRIES: [&[ConstBVPair]; 1] = [&ALL_CHAR_BASES];
 
 pub const TEST_BASE_VALUE_PAIR: ConstBVPair = ("test_base_value", Some(1.0));
 pub const HEALTH: ConstBVPair = ("health", None);

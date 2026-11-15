@@ -1,4 +1,6 @@
-use crate::consts::characters::traits::impact::TraitStatImpact;
+use crate::consts::characters::traits::{
+    impact::TraitStatImpact, registries::get_trait_from_registry_by_name,
+};
 
 macro_rules! define_trait_registry {
     (
@@ -99,6 +101,9 @@ impl PartialEq for CharacterTrait {
 impl Eq for CharacterTrait {}
 
 impl CharacterTrait {
+    pub fn from_trait_name(trait_name: &str) -> Option<&'static CharacterTrait> {
+        get_trait_from_registry_by_name(trait_name)
+    }
     pub const fn normal(name: &'static str) -> CharacterTrait {
         Self::new(name, CharacterTraitKind::Normal)
     }

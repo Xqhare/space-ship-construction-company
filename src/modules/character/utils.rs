@@ -7,6 +7,7 @@ use tyche::RngApi;
 use crate::{
     consts::characters::{
         RETIREMENT_AGE,
+        base_values::DEFAULT_CHAR_BASE_VALUE_VALUE,
         skills::{ConstSkill, registries::SKILL_REGISTRY_OF_REGISTRIES},
         traits::{
             CharacterTrait,
@@ -145,6 +146,15 @@ pub fn new_random_char_look(utils: &mut Utils) -> SSCCResult<&'static CharacterT
             }
         }
     }
+}
+
+pub fn new_random_char_strength(utils: &mut Utils) -> SSCCResult<HpFloat> {
+    Ok(HpFloat::from(
+        utils
+            .rng
+            .random_from_f32_range(0.0, DEFAULT_CHAR_BASE_VALUE_VALUE.expect("Must be defined"))
+            .map_err(|err| err.to_nemesis_error())?,
+    ))
 }
 
 pub fn new_random_char_birthday(utils: &mut Utils, utc_now: &Utc) -> SSCCResult<Utc> {

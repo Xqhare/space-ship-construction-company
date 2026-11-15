@@ -1,9 +1,9 @@
 use crate::consts::{
     base_values::{
-        SOC_BONUS_ALL,
+        REGISTRY_OF_BASE_VALUE_REGISTRIES, SOC_BONUS_ALL,
         science::{SCI_BONUS_ALL_FIELDS, SCI_REGISTRY_OF_REGISTRIES},
     },
-    characters::skills::registries::social::SKILL_SOCIAL_REGISTRY,
+    characters::base_values::SOCIABILITY,
 };
 
 pub mod base_values;
@@ -22,8 +22,10 @@ pub mod durations {
     pub const FORTNIGHT_DUR_SECS: Duration = Duration::from_secs(60 * 60 * 24 * 14);
 }
 
-pub fn get_bvp_by_bv_name(_bvp_name: &'static str) -> ConstBVPair {
-    todo!("Prob a reg of regs like with Skills / traits")
+pub fn get_bvp_by_bv_name(bvp_name: &'static str) -> Option<&'static ConstBVPair> {
+    REGISTRY_OF_BASE_VALUE_REGISTRIES
+        .iter()
+        .find_map(|reg| reg.iter().find(|entry| entry.0 == bvp_name))
 }
 
 /// Normalise many bvp_names
@@ -43,10 +45,7 @@ pub fn normalise_bvp_name(bvp_name: &'static str) -> Vec<&'static str> {
             .flat_map(|reg| reg.iter().map(|field| field.name))
             .collect()
     } else if bvp_name == SOC_BONUS_ALL.0 {
-        SKILL_SOCIAL_REGISTRY
-            .iter()
-            .map(|entry| entry.name)
-            .collect()
+        vec![SOCIABILITY.0]
     } else {
         vec![bvp_name]
     }

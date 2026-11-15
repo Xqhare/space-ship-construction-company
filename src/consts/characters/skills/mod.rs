@@ -28,7 +28,7 @@ pub mod registries;
 
 pub const MAX_SKILL_SECONDARIES: usize = 10;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConstSkill {
     pub name: &'static str,
     pub master: Option<SkillStatImpact>,
@@ -87,6 +87,24 @@ pub struct SkillStatImpact {
     pub factor: f32,
     pub op: Op,
 }
+
+impl PartialEq for SkillStatImpact {
+    fn eq(&self, other: &Self) -> bool {
+        if self.base_value_name == other.base_value_name
+            && self.factor == other.factor // Apparently deriving eq cannot do this check
+            && self.op == other.op
+        {
+            true
+        } else {
+            false
+        }
+    }
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
+impl Eq for SkillStatImpact {}
 
 impl SkillStatImpact {
     pub(super) const fn const_default() -> SkillStatImpact {

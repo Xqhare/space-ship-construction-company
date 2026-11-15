@@ -1,0 +1,8 @@
+{ "story_town_trade_goods_dict": {"Chinaware": 3, "Cloth": 4.05, "Cloves": 8, "Coal": 10, "Coca": 5.4, "Coffee": 3.3, "Copper": 3.45, "Cotton": 4.95,
+                               "Dyes": 4, "Fish": 2.5, "Fur": 3.5, "Gems": 4, "Glass": 3.45, "Gold": 16, "Grain": 2.5, "Incense": 3, "Iron": 4.5,
+                               "Ivory": 5, "Livestock": 3.4, "Naval Supplies": 3, "Paper": 4.725, "Salt": 3.3, "Silk": 5, "Slaves": 2.2,
+                               "Spices": 3.3, "Sugar": 5.25, "Tea": 3, "Tobacco": 4.5, "Tropical Wood": 3, "Wine": 3.125, "Wool": 2.875},
+ "currency_time_fractions": [1, 3, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 100],
+ "currency_coins_denomination": [2, 5, 10, 20, 50, 100],
+"currency_non_decimal_base_120": [2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60, 120]
+}

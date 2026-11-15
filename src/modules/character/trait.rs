@@ -1,3 +1,4 @@
+use aequa::{Array, Object, XffSerde, XffValue, xff};
 use athena::float::HpFloat;
 use tyche::RngApi;
 
@@ -10,11 +11,12 @@ use crate::{
             work_ethics::TRAIT_WORK_ETHIC_REGISTRY,
         },
     },
-    error::SSCCResult,
+    error::{SSCCResult, new_xff_serde_error},
     needs_home::accum_char_traits,
     utils::Utils,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharacterTraitStore {
     pub intellect: &'static CharacterTrait,
     pub looks: &'static CharacterTrait,
@@ -231,6 +233,152 @@ impl CharacterTraitStore {
                 });
                 self.normal_traits.push(character_trait);
             }
+        }
+    }
+}
+const INTELLECT_FIELD: &str = "int";
+const LOOKS_FIELD: &str = "looks";
+const HEALTH_FIELD: &str = "health";
+const MENTAL_HEALTH_FIELD: &str = "mental_health";
+const SOCIAL_FIELD: &str = "social";
+const WORK_ETHIC_FIELD: &str = "work";
+const NORMAL_TRAITS_FIELD: &str = "normals";
+impl XffSerde for CharacterTraitStore {
+    fn to_xff(&self) -> XffValue {
+        let mut obj = Object::new();
+        obj.insert(INTELLECT_FIELD, self.intellect.name);
+        obj.insert(LOOKS_FIELD, self.looks.name);
+        if let Some(health) = self.health {
+            obj.insert(HEALTH_FIELD, health.name);
+        }
+        if let Some(mental_health) = self.mental_health {
+            obj.insert(MENTAL_HEALTH_FIELD, mental_health.name);
+        }
+        if let Some(social) = self.social {
+            obj.insert(SOCIAL_FIELD, social.name);
+        }
+        if let Some(work) = self.work_ethic {
+            obj.insert(WORK_ETHIC_FIELD, work.name);
+        }
+        let normals = {
+            let mut ary = Array::new();
+            for normal in &self.normal_traits {
+                ary.push(normal.name);
+            }
+            ary
+        };
+        obj.insert(NORMAL_TRAITS_FIELD, normals);
+        xff!(obj)
+    }
+    fn from_xff(xff: &XffValue) -> Result<Self, nemesis::NemesisError>
+    where
+        Self: Sized,
+    {
+        if let Some(obj) = xff.as_object() {
+            if let Some(int) = obj.get(INTELLECT_FIELD)
+                && let Some(int) = int.as_string()
+                && let Some(intellect) = CharacterTrait::from_trait_name(&int)
+                && let Some(looks) = obj.get(LOOKS_FIELD)
+                && let Some(looks) = looks.as_string()
+                && let Some(looks) = CharacterTrait::from_trait_name(&looks)
+                && let Some(normals) = obj.get(NORMAL_TRAITS_FIELD)
+                && let Some(normals) = normals.as_array()
+            {
+                let normal_traits = {
+                    let mut tmp = Vec::with_capacity(normals.len());
+                    for normal in normals {
+                        tmp.push(
+                            CharacterTrait::from_trait_name(&normal.to_string()).ok_or(
+                                new_xff_serde_error(&format!(
+                                    "Cannot parse '{}' as a valid trait.",
+                                    normal.to_string(),
+                                ))
+                                .add_ctx(format!("XffValue: {xff:?}")),
+                            )?,
+                        )
+                    }
+                    tmp
+                };
+                let health = {
+                    if let Some(health) = obj.get(HEALTH_FIELD) {
+                        Some(
+                            CharacterTrait::from_trait_name(&health.to_string()).ok_or(
+                                new_xff_serde_error(&format!(
+                                    "Cannot parse '{}' as a valid trait.",
+                                    health.to_string(),
+                                ))
+                                .add_ctx(format!("XffValue: {xff:?}")),
+                            )?,
+                        )
+                    } else {
+                        None
+                    }
+                };
+                let mental_health = {
+                    if let Some(mental_health) = obj.get(MENTAL_HEALTH_FIELD) {
+                        Some(
+                            CharacterTrait::from_trait_name(&mental_health.to_string()).ok_or(
+                                new_xff_serde_error(&format!(
+                                    "Cannot parse '{}' as a valid trait.",
+                                    mental_health.to_string(),
+                                ))
+                                .add_ctx(format!("XffValue: {xff:?}")),
+                            )?,
+                        )
+                    } else {
+                        None
+                    }
+                };
+                let social = {
+                    if let Some(social) = obj.get(HEALTH_FIELD) {
+                        Some(
+                            CharacterTrait::from_trait_name(&social.to_string()).ok_or(
+                                new_xff_serde_error(&format!(
+                                    "Cannot parse '{}' as a valid trait.",
+                                    social.to_string(),
+                                ))
+                                .add_ctx(format!("XffValue: {xff:?}")),
+                            )?,
+                        )
+                    } else {
+                        None
+                    }
+                };
+                let work_ethic = {
+                    if let Some(work) = obj.get(HEALTH_FIELD) {
+                        Some(
+                            CharacterTrait::from_trait_name(&work.to_string()).ok_or(
+                                new_xff_serde_error(&format!(
+                                    "Cannot parse '{}' as a valid trait.",
+                                    work.to_string(),
+                                ))
+                                .add_ctx(format!("XffValue: {xff:?}")),
+                            )?,
+                        )
+                    } else {
+                        None
+                    }
+                };
+                Ok(CharacterTraitStore {
+                    intellect,
+                    looks,
+                    health,
+                    mental_health,
+                    social,
+                    work_ethic,
+                    normal_traits,
+                })
+            } else {
+                Err(new_xff_serde_error(
+                    "Cannot parse CharacterTraitStore; Required fields missing!",
+                )
+                .add_ctx(format!("Value: '{xff:?}'")))
+            }
+        } else {
+            Err(
+                new_xff_serde_error("Cannot parse CharacterTraitStore; XffValue not an object!")
+                    .add_ctx(format!("{xff:?}")),
+            )
         }
     }
 }

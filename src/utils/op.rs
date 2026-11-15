@@ -2,7 +2,7 @@ use aequa::{XffSerde, XffValue, xff};
 use nemesis::{NemesisError, NemesisResultExt};
 
 use crate::error::{new_startup_error, new_xff_serde_error};
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Op {
     Add,
     Sub,

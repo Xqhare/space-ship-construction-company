@@ -15,8 +15,14 @@ use crate::consts::{
     normalise_bvp_name,
 };
 
+#[cfg(test)]
+pub mod tests;
+
+pub mod xff;
+
 pub type CharacterSkillRegistryId = usize;
 
+#[derive(Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct CharacterSkill {
     pub skill: &'static ConstSkill,
@@ -117,6 +123,7 @@ impl CharacterSkill {
         self.lost_rust_this_sim_tick = false;
     }
     pub fn add_points(&mut self, points: HpFloat) {
+        let points = points * *self.affinity();
         let new_points = self.points + points;
         let needed_points = calc_final_point_cost_for_level(self.level);
         if needed_points > new_points {

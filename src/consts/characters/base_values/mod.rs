@@ -19,13 +19,15 @@ pub const ALL_CHAR_BASES: [ConstBVPair; 8] = [
     STRENGTH,
 ];
 
-pub const HEALTH: ConstBVPair = ("health", Some(1000.0));
-pub const MENTAL_HEALTH: ConstBVPair = ("mental_health", Some(1000.0));
+pub const DEFAULT_CHAR_BASE_VALUE_VALUE: Option<f32> = Some(1000.0);
+
+pub const HEALTH: ConstBVPair = ("health", DEFAULT_CHAR_BASE_VALUE_VALUE);
+pub const MENTAL_HEALTH: ConstBVPair = ("mental_health", DEFAULT_CHAR_BASE_VALUE_VALUE);
 pub const PAIN: ConstBVPair = ("pain", Some(0.0));
 pub const MONEY: ConstBVPair = ("money", Some(0.0));
-pub const HAPPINESS: ConstBVPair = ("happiness", Some(1000.0));
+pub const HAPPINESS: ConstBVPair = ("happiness", DEFAULT_CHAR_BASE_VALUE_VALUE);
+pub const SOCIABILITY: ConstBVPair = ("sociability", DEFAULT_CHAR_BASE_VALUE_VALUE);
 
 // Values constructed during char init
 pub const IQ: ConstBVPair = ("iq", None);
-pub const SOCIABILITY: ConstBVPair = ("sociability", None);
 pub const STRENGTH: ConstBVPair = ("strength", None);

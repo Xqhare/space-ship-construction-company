@@ -5,10 +5,7 @@ use athena::float::HpFloat;
 use nemesis::NemesisError;
 
 use crate::{
-    consts::{
-        characters::{ traits::CharacterTrait},
-        normalise_bvp_name,
-    },
+    consts::{characters::traits::CharacterTrait, normalise_bvp_name, normalise_bvp_names},
     error::new_xff_serde_error,
     modules::modifier::r#type::ModifierType,
     utils::op::Op,
@@ -87,7 +84,7 @@ pub fn accum_char_traits(
         let mut perc_set = None;
         for tr in traits {
             for impact in tr.affected_base_value_pairs() {
-                if impact.base_value_name == impacted_bv_name {
+                if normalise_bvp_name(impact.base_value_name).contains(&impacted_bv_name) {
                     let (accum, limit, set) = match impact.kind {
                         ModifierType::Flat => (&mut flat_accum, &mut flat_limit, &mut flat_set),
                         ModifierType::Percentage => {
