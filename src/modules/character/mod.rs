@@ -92,8 +92,8 @@ impl Character {
         }
         let name = CharacterName::new_random(utils)?;
         let teams = Vec::new();
-        let age_in_years =
-            HpFloat::cast((*utc_now - birthday).as_secs()) / 60.0 / 60.0 / 24.0 / 365.2425;
+        let age_in_years = HpFloat::cast((*utc_now - birthday).as_secs());
+        let age_in_years = age_in_years / 60.0 / 60.0 / 24.0 / 365.2425;
         let mut char = Character::new_custom(
             character_data_box_id,
             traits,

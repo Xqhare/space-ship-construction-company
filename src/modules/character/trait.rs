@@ -330,7 +330,7 @@ impl XffSerde for CharacterTraitStore {
                     }
                 };
                 let social = {
-                    if let Some(social) = obj.get(HEALTH_FIELD) {
+                    if let Some(social) = obj.get(SOCIAL_FIELD) {
                         Some(
                             CharacterTrait::from_trait_name(&social.to_string()).ok_or(
                                 new_xff_serde_error(&format!(
@@ -345,7 +345,7 @@ impl XffSerde for CharacterTraitStore {
                     }
                 };
                 let work_ethic = {
-                    if let Some(work) = obj.get(HEALTH_FIELD) {
+                    if let Some(work) = obj.get(WORK_ETHIC_FIELD) {
                         Some(
                             CharacterTrait::from_trait_name(&work.to_string()).ok_or(
                                 new_xff_serde_error(&format!(

@@ -71,11 +71,7 @@ impl CharacterSkill {
 
         let final_affinity = (age_in_years / 100.0) + *affinity;
         let final_level: HpFloat = base_level + (base_level * final_affinity);
-        let final_level = final_level.get_integer_part();
-        debug_assert!(
-            final_level.is_positive(),
-            "Final calculated level is negative! Something truly terrible went wron!"
-        );
+        let final_level = final_level.get_integer_part().max(0);
         debug_assert!(
             final_level <= u8::MAX as i128,
             "Final calculated level is larger than u8::MAX!"

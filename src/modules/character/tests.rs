@@ -14,8 +14,8 @@ fn basic() {
     let character_data_box = DataBox::new();
     let character_data_box_id = slot_map.insert(character_data_box);
     let utc_now = Utc::from_ymd_hms(2500, 1, 1, 0, 0, 0);
-    let mut utils = Utils::new("../../../data/", vec![1, 2, 3])
-        .expect("Cannot create utils for testing character");
+    let mut utils =
+        Utils::new("./data/", vec![1, 2, 3]).expect("Cannot create utils for testing character");
     let char = Character::new_random(
         &mut utils,
         character_data_box_id,
@@ -40,8 +40,8 @@ fn basic() {
     for base in ALL_CHAR_BASES {
         assert!(stats.get(base.0).is_some())
     }
-    assert!(char.birthday > utc_now);
-    assert!(char.retirement < utc_now);
+    assert!(char.birthday < utc_now);
+    assert!(char.retirement > utc_now);
 }
 
 #[test]
@@ -50,8 +50,8 @@ fn xff_serde() {
     let character_data_box = DataBox::new();
     let character_data_box_id = slot_map.insert(character_data_box);
     let utc_now = Utc::from_ymd_hms(2500, 1, 1, 0, 0, 0);
-    let mut utils = Utils::new("../../../data/", vec![1, 2, 3])
-        .expect("Cannot create utils for testing character");
+    let mut utils =
+        Utils::new("./data/", vec![1, 2, 3]).expect("Cannot create utils for testing character");
     let char = Character::new_random(
         &mut utils,
         character_data_box_id,
@@ -73,6 +73,9 @@ fn xff_serde() {
     assert!(from_xff.birthday == char.birthday);
     assert!(from_xff.retirement == char.retirement);
     assert!(from_xff.teams == char.teams);
+    println!("from: {:?}", from_xff.traits);
+    println!();
+    println!("char: {:?}", char.traits);
     assert!(from_xff.traits == char.traits);
     assert!(from_xff.skills == char.skills);
 }

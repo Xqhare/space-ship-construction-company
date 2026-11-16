@@ -47,10 +47,10 @@ impl XffSerde for CharacterSkill {
                 && let Some(unused) = unused.into_usize()
                 && let Some(lost_rust) = obj.get(LOST_RUST_THIS_SIM_TICK_FIELD)
                 && let Some(lost_rust_this_sim_tick) = lost_rust.into_boolean()
-                && let Some(rust) = obj.get(LEVEL_FIELD)
+                && let Some(rust) = obj.get(RUST_FIELD)
                 && let Some(rust) = rust.into_number()
                 && let Some(rust) = rust.into_usize()
-                && let Some(max_rust) = obj.get(LEVEL_FIELD)
+                && let Some(max_rust) = obj.get(MAX_RUST_FIELD)
                 && let Some(max_rust) = max_rust.into_number()
                 && let Some(max_rust) = max_rust.into_usize()
             {
