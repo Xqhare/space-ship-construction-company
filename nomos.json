@@ -1,0 +1,8 @@
+{
+  "task_files": [
+    "nomos.nomos",
+    "src/modules/character/nomos.nomos"
+  ],
+  "version": 1,
+  "default_prio_level": 5
+}
