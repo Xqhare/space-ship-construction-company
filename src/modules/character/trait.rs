@@ -16,6 +16,7 @@ use crate::{
     utils::Utils,
 };
 
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharacterTraitStore {
     pub intellect: &'static CharacterTrait,
