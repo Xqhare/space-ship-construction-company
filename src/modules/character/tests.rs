@@ -33,15 +33,9 @@ fn basic() {
 
     for _ in 0..50 {
         let character_data_box_id = slot_map.insert(DataBox::new());
-        let char = Character::new_random(
-            &mut utils,
-            character_data_box_id,
-            slot_map
-                .get_mut(character_data_box_id)
-                .expect("Id must be valid"),
-            &utc_now,
-        )
-        .expect("Random character generation must succeed");
+        let char =
+            Character::new_random(&mut utils, character_data_box_id, &mut slot_map, &utc_now)
+                .expect("Random character generation must succeed");
 
         let stats = char
             .get_full_stats(&slot_map)
@@ -70,13 +64,9 @@ fn ultra_skill_works() {
     let mut utils =
         Utils::new("./data/", vec![1, 2, 3]).expect("Cannot create utils for testing character");
     let ultra_box_id = slot_map.insert(DataBox::new());
-    let ultra_char = Character::new_random_one_ultra_skill(
-        &mut utils,
-        ultra_box_id,
-        slot_map.get_mut(ultra_box_id).expect("Id must be valid"),
-        &utc_now,
-    )
-    .expect("Ultra skill character generation must succeed");
+    let ultra_char =
+        Character::new_random_one_ultra_skill(&mut utils, ultra_box_id, &mut slot_map, &utc_now)
+            .expect("Ultra skill character generation must succeed");
     assert!(
         ultra_char
             .skills
@@ -93,15 +83,9 @@ fn xff_serde() {
     let utc_now = Utc::from_ymd_hms(2500, 1, 1, 0, 0, 0);
     let mut utils =
         Utils::new("./data/", vec![1, 2, 3]).expect("Cannot create utils for testing character");
-    let mut char = Character::new_random(
-        &mut utils,
-        character_data_box_id,
-        slot_map
-            .get_mut(character_data_box_id)
-            .expect("Id must be valid"),
-        &utc_now,
-    )
-    .expect("Character creation must succeed");
+    let mut char =
+        Character::new_random(&mut utils, character_data_box_id, &mut slot_map, &utc_now)
+            .expect("Character creation must succeed");
 
     char.force_trait(&TRAIT_HEALTH_MUTE, &mut slot_map);
     char.force_trait(&TRAIT_MENTAL_HEALTH_MELANCHOLIC, &mut slot_map);
@@ -149,12 +133,12 @@ fn traits_and_skill_use_lifecycle() {
 
     let mut char = Character::new_custom(
         data_box_id,
+        &mut slot_map,
         traits,
         Vec::new(),
         Vec::new(),
         birthday,
         name,
-        slot_map.get_mut(data_box_id).expect("Id must be valid"),
     )
     .expect("Custom character creation must succeed");
 
@@ -236,15 +220,9 @@ fn traits_and_skill_use_lifecycle() {
     );
 
     // Adding a duplicate skill is a no-op
-    char.add_skill_at_low_zero_level(
-        &SKILL_SOCIAL_JUDGE_OF_INTENT,
-        slot_map.get_mut(data_box_id).unwrap(),
-    )
-    .unwrap();
-    char.add_skill_at_low_zero_level(
-        &SKILL_SOCIAL_JUDGE_OF_INTENT,
-        slot_map.get_mut(data_box_id).unwrap(),
-    )
-    .unwrap();
+    char.add_skill_at_low_zero_level(&SKILL_SOCIAL_JUDGE_OF_INTENT, &mut slot_map)
+        .unwrap();
+    char.add_skill_at_low_zero_level(&SKILL_SOCIAL_JUDGE_OF_INTENT, &mut slot_map)
+        .unwrap();
     assert_eq!(char.skills.len(), 2);
 }

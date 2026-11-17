@@ -23,45 +23,66 @@ macro_rules! define_trait_registry {
 pub mod impact;
 pub mod registries;
 
-/// Maximum amount of specific skills a character trait can impact
-/// Limit is chosen arbitrarily but should be kept low in any case.
+/// Maximum number of [`TraitStatImpact`]s a [`CharacterTrait`] can define (enforced at compile time).
 pub const MAX_CHARACTER_TRAIT_SKILL_IMPACTS: usize = 4;
 
+/// Maximum number of flags a [`CharacterTrait`] can define (enforced at compile time).
 pub const MAX_CHARACTER_FLAGS: usize = 8;
 
+/// Maximum number of conflicting trait names a [`CharacterTrait`] can define (enforced at compile time).
 pub const MAX_CHARACTER_CONFLICTING_TRAIT_COUNT: usize = 4;
 
+/// Maximum number of [`TraitAffinityImpact`]s a [`CharacterTrait`] can define (enforced at compile time).
 pub const MAX_CHARACTER_TRAIT_AFFINITY_TARGETS: usize = 4;
 
+/// Categorizes which slot(s) in [`CharacterTraitStore`](crate::modules::character::trait::CharacterTraitStore)
+/// a [`CharacterTrait`] occupies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharacterTraitKind {
+    /// Mandatory single-slot trait rolled at character creation.
     Intellect,
+    /// Mandatory single-slot trait rolled at character creation.
     Looks,
+    /// Optional single-slot trait.
     Health,
+    /// Optional single-slot trait.
     MentalHealth,
+    /// Optional single-slot trait.
     Social,
+    /// Optional single-slot trait.
     WorkEthics,
+    /// Multi-slot general trait (subject to [`CharacterTrait::conflicting_traits`] checks).
     Normal,
 }
+
+/// Specifies which skill(s) a [`TraitAffinityImpact`] modifies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AffinityTarget {
-    /// (Internal Use) None - Should not be used for defining a real AffinityTarget. Will cause errors if
-    /// used.
+    /// Internal default placeholder for unused array slots.
+    ///
+    /// Must never be used in an active [`TraitAffinityImpact`]; encountering `AffinityTarget::None`
+    /// during [`CharacterSkill`](crate::modules::character::skill::CharacterSkill) affinity calculation
+    /// triggers a `debug_assert!` failure in debug builds (and is ignored in release builds).
     None,
-    /// Applies to a specific skill by name (e.g. SKILL_SOCIAL_LYING.name)
+    /// Applies to a specific skill by name (`1.0 * delta`), e.g. `SKILL_SOCIAL_LYING.name`.
     Skill(&'static str),
-    /// Applies to any skill whose master or secondary impacts this base value
-    /// (supports group keys like SCI_BONUS_ALL_FIELDS.0 via normalise_bvp_name!)
+    /// Applies to any skill whose `master` (`1.0 * delta`) or `secondaries` (`0.25 * delta` per match)
+    /// impact this base value. Supports group keys like `SCI_BONUS_ALL_FIELDS.0` via
+    /// [`normalise_bvp_name`](crate::consts::normalise_bvp_name).
     BaseValue(&'static str),
-    /// Applies to every skill (e.g. Genius, Quick Learner, Simpleton)
+    /// Applies to every skill (`1.0 * delta`), e.g. Genius or Dimwit.
     AllSkills,
 }
 
+/// Defines a trait's additive contribution (`delta`) to skill affinity for a given [`AffinityTarget`].
+///
+/// # Expected Range (`0.0..=1.0`, unenforced / soft-capped)
+/// Across all traits on a character (plus the `0.0125` base affinity), the summed affinity for a
+/// skill is expected to fall within `0.0..=1.0`. See [`CharacterSkill`](crate::modules::character::skill::CharacterSkill)
+/// for how values outside `0.0..=1.0` behave.
 #[derive(Debug, Clone, Copy)]
 pub struct TraitAffinityImpact {
     pub target: AffinityTarget,
-    /// The range for *all* affinities added together should be 0.0..1.0 (Upper limit
-    /// soft-capped)
     pub delta: f32,
 }
 
@@ -77,6 +98,15 @@ impl TraitAffinityImpact {
     }
 }
 
+/// Compile-time definition of a character trait, including its slot kind, skill affinity deltas,
+/// stat impacts, flags, and conflicting trait names.
+///
+/// # Expected Usage & Registry Invariants
+/// - Every `CharacterTrait` must be registered in [`TRAIT_REGISTRY_OF_REGISTRIES`](registries::TRAIT_REGISTRY_OF_REGISTRIES)
+///   with a globally unique `name`.
+/// - All entries in [`CharacterTrait::conflicting_traits`] must exist in a registry and be symmetric
+///   (if trait `A` lists `B` as conflicting, `B` must also list `A`; verified by unit tests in
+///   [`registries`]).
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
 pub struct CharacterTrait {

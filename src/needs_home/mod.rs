@@ -5,7 +5,7 @@ use athena::float::HpFloat;
 use nemesis::NemesisError;
 
 use crate::{
-    consts::{characters::traits::CharacterTrait, normalise_bvp_name, normalise_bvp_names},
+    consts::{characters::traits::CharacterTrait, normalise_bvp_name},
     error::new_xff_serde_error,
     modules::modifier::r#type::ModifierType,
     utils::op::Op,
@@ -61,6 +61,23 @@ impl XffSerde for BaseValuePair {
     }
 }
 
+/// Accumulates all [`TraitStatImpact`](crate::consts::characters::traits::impact::TraitStatImpact)s
+/// across `traits` into `(base_value_name, (flat_accum, perc_accum))` pairs.
+///
+/// # Evaluation Rules
+/// 1. **Group Key Expansion**: Each impact's `base_value_name` is expanded via
+///    [`normalise_bvp_name`] (e.g. `SCI_BONUS_ALL_FIELDS` expands to all science field names, and
+///    `SOC_BONUS_ALL` expands to `sociability`).
+/// 2. **Sequential Arithmetic**: For each affected base value, `flat_accum` starts at `0.0` and
+///    `perc_accum` starts at `1.0` (`100%`). Impacts are applied in slice order using [`Op::Add`],
+///    [`Op::Sub`], [`Op::Mul`] (if the accumulator is `0.0`, multiplication sets it to `value`),
+///    and [`Op::Div`] (division by `0.0` is ignored).
+/// 3. **Limits & Overrides**: After arithmetic operations, [`Op::Lim`] clamps the accumulator to
+///    the highest limit value if exceeded, and [`Op::Set`] overrides the accumulator with the
+///    highest set value.
+/// 4. **Application**: [`Character::get_full_stats`](crate::modules::character::Character::get_full_stats)
+///    applies each returned tuple as `*stat = (*stat + flat_accum) * perc_accum` for stats tracked
+///    in the character's `StatBox`.
 pub fn accum_char_traits(
     traits: &[&'static CharacterTrait],
 ) -> Vec<(&'static str, (HpFloat, HpFloat))> {

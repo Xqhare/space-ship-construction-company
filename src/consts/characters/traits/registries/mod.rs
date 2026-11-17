@@ -14,7 +14,6 @@ use crate::consts::{
     },
 };
 
-// TODO: Go through all traits and make their modifier values make sense
 pub mod health;
 pub mod intellect;
 pub mod looks;

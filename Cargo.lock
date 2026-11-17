@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "athena"
 version = "2.2.0"
-source = "git+https://github.com/xqhare/athena#a7d8337d01d447e1b5bd9e8d56813feaf827b6e5"
+source = "git+https://github.com/xqhare/athena#b2bb70f84168ad9a828acf961aa5a4ac1b613986"
 dependencies = [
  "aequa",
  "libc",
@@ -23,7 +23,7 @@ dependencies = [
 [[package]]
 name = "fortuna"
 version = "2.2.0"
-source = "git+https://github.com/xqhare/fortuna#cec0445ea59a80b1867fe90f24de17d2cb0a03a0"
+source = "git+https://github.com/xqhare/fortuna#317e08edf60f54b0c4e4237345cf3be4c8fe0d75"
 dependencies = [
  "athena",
 ]
@@ -96,7 +96,7 @@ dependencies = [
 [[package]]
 name = "tyche"
 version = "1.3.0"
-source = "git+https://github.com/xqhare/tyche#90576dc249b3e0c4ff497d59acbe660646db5f9a"
+source = "git+https://github.com/xqhare/tyche#b2a9112a594d5b409f72ed40e45bf9a57563bf9c"
 dependencies = [
  "athena",
 ]

@@ -20,8 +20,55 @@ pub mod tests;
 
 pub mod xff;
 
-pub type CharacterSkillRegistryId = usize;
-
+/// Dynamic per-character state for a [`ConstSkill`], tracking affinity, level progression,
+/// and skill atrophy ("rust").
+///
+/// # Expected Usage & Unenforced Invariants
+///
+/// ## 1. Affinity (`affinity: HpFloat`)
+/// - **Expected Range (`0.0..=1.0`, unenforced / soft-capped)**:
+///   Calculated by [`CharacterSkill::update_from_traits`] starting from a base of `0.0125` (`1.25%`)
+///   and summing matching [`TraitAffinityImpact`](crate::consts::characters::traits::TraitAffinityImpact)
+///   deltas from the character's traits:
+///   - [`AffinityTarget::Skill`] and [`AffinityTarget::AllSkills`]: `+1.0 * delta`
+///   - [`AffinityTarget::BaseValue`] (expanded via [`normalise_bvp_name`]): `+1.0 * delta` when
+///     matching `skill.master`, and `+0.25 * delta` for each matching entry in
+///     [`ConstSkill::secondary_skills`].
+/// - **Boundary & Out-of-Range Behavior**:
+///   - `affinity <= 0.0`: Clamped to `0.0` when computing `max_rust` (resulting in
+///     `max_rust = SKILL_LEVEL_TOTAL_AMOUNT = 33`), but **not** clamped in
+///     [`CharacterSkill::add_points`] or
+///     [`SkillStatImpact::calc_final_stat_impact`](crate::consts::characters::skills::SkillStatImpact::calc_final_stat_impact).
+///     A skill with `<= 0.0` affinity cannot gain points (or loses points if negative) **and** produces
+///     zero or negative stat output.
+///   - `affinity >= 1.0`: Clamped to `1.0` when computing `max_rust` (resulting in `max_rust = 0`,
+///     making the skill completely immune to rust), but **not** clamped in
+///     [`CharacterSkill::add_points`] or `calc_final_stat_impact` (learning rate and stat output
+///     continue scaling linearly above `1.0`).
+/// - **Caching**: `affinity` and `max_rust` are cached on this struct for zero per-tick overhead.
+///   Callers must invoke [`CharacterSkill::update_from_traits`] whenever the owning character's
+///   traits change.
+///         - Note: Cache may be a misnomer as this is the only place `affinity` or the `rust_max` of
+///         a characters skill is stored. They could both be calculated from the other held data
+///         though on demand, so in a way they are just cached values? Naming remains hard.
+///
+/// ## 2. Rust Subsystem (`rust`, `max_rust`, `unused_counter`, `lost_rust_this_sim_tick`)
+/// - Models skill atrophy from non-use without deleting earned [`Level`] milestones:
+///   - [`CharacterSkill::simulation_tick`] increments `unused_counter`; every `6` consecutive
+///     simulation ticks without use resets `unused_counter` to `0` and adds `1` stack of `rust`
+///     (capped at `max_rust`), and resets `lost_rust_this_sim_tick` to `false`.
+///   - [`CharacterSkill::skill_used`] resets `unused_counter` to `0` and removes at most `1` stack
+///     of `rust` per simulation tick (guarded by `lost_rust_this_sim_tick`).
+///   - [`CharacterSkill::level`] returns the permanently earned [`Level`], whereas
+///     [`CharacterSkill::effective_level`] returns `level.level_down_by(rust)` (clamped at
+///     `Level::Low(0)`).
+///
+/// ## 3. Point Progression (`points`, `add_points`)
+/// - [`CharacterSkill::add_points`] scales incoming raw points by `*self.affinity()` and compares
+///   against [`calc_final_point_cost_for_level(self.level)`](calc_final_point_cost_for_level).
+/// - Assumes a single `add_points` call does not exceed multiple levels' worth of points at once:
+///   when `new_points >= needed_points`, it subtracts `needed_points` once and advances `self.level`
+///   by a single step via [`Level::level_up`].
 #[derive(Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct CharacterSkill {
@@ -29,43 +76,55 @@ pub struct CharacterSkill {
     affinity: HpFloat,
     points: HpFloat,
     level: Level,
-    /// Increments on each idle check (e.g. weekly/monthly); resets to 0 on use.
+    /// Increments on each idle simulation tick; resets to `0` on use or every `6` ticks when adding rust.
     unused_counter: u8,
     lost_rust_this_sim_tick: bool,
-    /// Current rust stacks (0..=max_rust).
+    /// Current rust stacks (`0..=max_rust`).
     rust: u8,
-    /// Calculated from affinity only. Always updated when affinity changes
+    /// Maximum rust stacks (`0..=SKILL_LEVEL_TOTAL_AMOUNT`), derived from `affinity` whenever traits update.
     max_rust: u8,
 }
 
+// I may be taking the advice to 'minimise magic numbers as much as possible' a little too literally
+const UNUSED_COUNTER_FLOOR: u8 = 0;
+const UNUSED_COUNTER_INCREMENT: u8 = 1;
+const UNUSED_COUNTER_ADD_RUST_TRIGGER: u8 = 6;
+const RUST_FLOOR: u8 = 0;
+const RUST_INCREMENT: u8 = 1;
+
 impl CharacterSkill {
+    /// Creates a new `CharacterSkill` at `Level::Low(0)` with `0` points and `0` rust,
+    /// initializing `affinity` and `max_rust` from `traits`.
     pub fn new(skill: &'static ConstSkill, traits: &[&'static CharacterTrait]) -> CharacterSkill {
         let mut tmp = CharacterSkill {
             skill,
             affinity: HpFloat::new_zero(),
             points: HpFloat::new_zero(),
             level: Level::Low(0),
-            unused_counter: 0,
+            unused_counter: UNUSED_COUNTER_FLOOR,
             lost_rust_this_sim_tick: false,
-            rust: 0,
-            max_rust: 0,
+            rust: RUST_FLOOR,
+            max_rust: RUST_FLOOR,
         };
         tmp.update_from_traits(traits);
         tmp
     }
-    // TODO: Better name
-    /// Expect most skill level to range from `Level::Low(0)` through `Level::Medium(MAX)`.
-    /// Some will have a skill level up to `Level::High(MAX)`.
+    /// Normalizes the skill's starting [`Level`] based on the character's `iq`, `age_in_years`,
+    /// and current `affinity` (resets current level progress and rust).
     ///
-    /// Skill level is hard capped at `Level::High(MAX)` (for gifted & old characters).
+    /// # Formula & Expected Ranges
+    /// - Expects `iq` in `[50.0, 149.0]` (`normalised_iq = (iq - 50.0) / 100.0`) and `age_in_years > 0.0`.
+    /// - Computes `base_level = trunc(20 * ((iq - 50) / 100))` and
+    ///   `final_level = trunc(base_level * (1 + (age_in_years / 100) + affinity))`.
+    /// - Most characters land between `Level::Low(0)` and `Level::Medium(9)`.
+    /// - Hard-capped at ordinal `29` (`Level::High(9)`); [`Level::Ultra`] is never produced by
+    ///   this method.
     pub fn normalise_char_skill_from_char(&mut self, iq: HpFloat, age_in_years: HpFloat) {
         let normalised_iq = iq - 50.0; // => 0..99
         let niq_perc = normalised_iq / 100.0;
-        let capped: HpFloat = HpFloat::new(
-            (SKILL_LEVEL_LOW_AMOUNT + SKILL_LEVEL_MEDIUM_AMOUNT) as i128,
-            0,
-        ) * niq_perc;
-        let base_level = HpFloat::new(capped.get_integer_part() as i128, 0);
+        let capped: HpFloat =
+            HpFloat::cast((SKILL_LEVEL_LOW_AMOUNT + SKILL_LEVEL_MEDIUM_AMOUNT) as u64) * niq_perc;
+        let base_level = HpFloat::cast(capped.get_integer_part());
 
         let affinity = self.affinity();
 
@@ -108,10 +167,10 @@ impl CharacterSkill {
         }
     }
     pub fn simulation_tick(&mut self) {
-        self.unused_counter += 1;
-        if self.unused_counter >= 6 {
-            self.unused_counter = 0;
-            self.rust += 1;
+        self.unused_counter += UNUSED_COUNTER_INCREMENT;
+        if self.unused_counter >= UNUSED_COUNTER_ADD_RUST_TRIGGER {
+            self.unused_counter = UNUSED_COUNTER_FLOOR;
+            self.rust += RUST_INCREMENT;
             if self.rust > self.max_rust {
                 self.rust = self.max_rust
             }
@@ -130,7 +189,7 @@ impl CharacterSkill {
         }
     }
     pub fn skill_used(&mut self) {
-        self.unused_counter = 0;
+        self.unused_counter = UNUSED_COUNTER_FLOOR;
         if !self.lost_rust_this_sim_tick {
             self.rust = self.rust.saturating_sub(1);
             self.lost_rust_this_sim_tick = true;
@@ -143,9 +202,8 @@ impl CharacterSkill {
     /// Resets the progress of the current level to 0 across the board.
     pub fn reset_current_level(&mut self) {
         self.points = HpFloat::new_zero();
+        self.reset_rust();
         self.lost_rust_this_sim_tick = true;
-        self.rust = 0;
-        self.unused_counter = 0;
     }
     pub fn set_level(&mut self, new_level: Level) {
         self.reset_current_level();
@@ -154,13 +212,14 @@ impl CharacterSkill {
     /// Hard reset the rust subsystem.
     ///
     /// Consider using [`CharacterSkill::skill_used`] if applicable.
+    #[inline]
     pub fn reset_rust(&mut self) {
-        self.unused_counter = 0;
-        self.rust = 0;
+        self.unused_counter = UNUSED_COUNTER_FLOOR;
+        self.rust = RUST_FLOOR;
         self.lost_rust_this_sim_tick = false;
     }
     pub fn is_rusty(&self) -> bool {
-        if self.rust == 0 { false } else { true }
+        if self.rust == RUST_FLOOR { false } else { true }
     }
     /// Returns the current level *without* rust applied
     pub fn level(&self) -> &Level {

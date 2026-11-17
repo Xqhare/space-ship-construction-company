@@ -16,6 +16,32 @@ use crate::{
     utils::Utils,
 };
 
+/// Stores all [`CharacterTrait`]s assigned to a [`Character`](super::Character).
+///
+/// # Trait Slot Categories
+/// - **Mandatory Single-Slot (`intellect`, `looks`)**: Always populated. [`CharacterTraitStore::add_trait`]
+///   always returns `false` for [`CharacterTraitKind::Intellect`] and [`CharacterTraitKind::Looks`],
+///   and [`CharacterTraitStore::remove_trait`] is a no-op for them; they can only be replaced via
+///   [`CharacterTraitStore::force_trait`].
+/// - **Optional Single-Slot (`health`, `mental_health`, `social`, `work_ethic`)**: Hold at most one
+///   trait of their respective [`CharacterTraitKind`]. [`CharacterTraitStore::add_trait`] only
+///   inserts if the slot is `None`, whereas [`CharacterTraitStore::force_trait`] overwrites the slot.
+/// - **Multi-Slot (`normal_traits`)**: Holds any number of unique, non-conflicting
+///   [`CharacterTraitKind::Normal`] traits. [`CharacterTraitStore::add_trait`] rejects duplicates
+///   and traits listed in an existing normal trait's [`conflicting_traits`](CharacterTrait::conflicting_traits);
+///   [`CharacterTraitStore::force_trait`] removes any duplicate or conflicting normal traits before pushing.
+///
+/// # Expected Usage & Unenforced Invariants
+/// - Marked `#[non_exhaustive]` to encourage construction via [`CharacterTraitStore::new_random`]
+///   (or future constructors). When constructed or mutated directly within this crate, each single-slot
+///   field is assumed to hold a trait of its matching [`CharacterTraitKind`], and `normal_traits` is
+///   assumed to contain no duplicates or symmetric conflicts.
+/// - **Do not call `add_trait`, `force_trait`, or `remove_trait` directly on `CharacterTraitStore`
+///   for an active [`Character`](super::Character)**: `CharacterTraitStore` only updates trait
+///   references and does **not** sync trait flags to `DataBox.flags` or recalculate affinities on
+///   `Character.skills`. Always use [`Character::add_trait`](super::Character::add_trait),
+///   [`Character::force_trait`](super::Character::force_trait), or
+///   [`Character::remove_trait`](super::Character::remove_trait) instead.
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CharacterTraitStore {
@@ -29,6 +55,11 @@ pub struct CharacterTraitStore {
 }
 
 impl CharacterTraitStore {
+    /// Generates a random [`CharacterTraitStore`] given pre-rolled `intellect` and `looks` traits.
+    ///
+    /// Each optional single-slot category (`health`, `mental_health`, `social`, `work_ethic`) has a
+    /// `50%` chance of being populated with a random trait from its registry, followed by `1..=4`
+    /// random attempts to add traits from [`TRAIT_NORMAL_REGISTRY`].
     pub fn new_random(
         utils: &mut Utils,
         intellect: &'static CharacterTrait,
@@ -105,6 +136,9 @@ impl CharacterTraitStore {
         }
         Ok(store)
     }
+    /// Removes `character_trait` from the store if present.
+    ///
+    /// Mandatory traits (`Intellect` and `Looks`) cannot be removed and are ignored.
     pub fn remove_trait(&mut self, character_trait: &'static CharacterTrait) {
         if self.has_trait(character_trait.name) {
             match character_trait.kind {
@@ -120,12 +154,15 @@ impl CharacterTraitStore {
             }
         }
     }
+    /// Computes the `(flat_accum, perc_accum)` stat impact accumulators across all traits in the store.
     pub fn make_all_traits_accum(&self) -> Vec<(&'static str, (HpFloat, HpFloat))> {
         accum_char_traits(&self.get_all_traits())
     }
+    /// Returns a `Vec` containing all active traits in the store (all `normal_traits` plus
+    /// `intellect`, `looks`, and any populated optional single-slot traits).
     pub fn get_all_traits(&self) -> Vec<&'static CharacterTrait> {
-        // Technically I need to reserve at most 6 more (CharTraitStore field amount - 1 )
-        let mut out = Vec::with_capacity(self.normal_traits.len() + 10);
+        // Reserve capacity for `normal_traits` plus up to 6 single-slot traits
+        let mut out = Vec::with_capacity(self.normal_traits.len() + 6);
         out.extend(self.normal_traits.clone());
         out.push(self.intellect);
         out.push(self.looks);

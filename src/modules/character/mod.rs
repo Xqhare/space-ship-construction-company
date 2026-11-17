@@ -24,7 +24,7 @@ use crate::{
         },
         get_bvp_by_bv_name, normalise_bvp_name,
     },
-    error::{SSCCResult, new_character_error, new_internal_error},
+    error::{SSCCResult, new_character_error},
     modules::character::{
         name::CharacterName,
         skill::CharacterSkill,
@@ -53,28 +53,55 @@ pub mod r#trait;
 pub mod utils;
 pub mod xff;
 
+/// Represents an individual character in the simulation.
+///
+/// # Ownership & `DataBox` Synchronization
+///
+/// A character's state is split between this struct (identity, lifecycle dates, team memberships,
+/// [`CharacterTraitStore`], and [`CharacterSkill`] list) and an external [`DataBox`] stored in a
+/// centralized `SlotMap<DataBox>` at `self.data_box`.
+///
+/// ## Expected Usage & Unenforced Invariants
+/// - **Matching `DataBox`**: Methods that accept `data_box_slot_map: &mut SlotMap<DataBox>` assume the provided slot map contains the
+///   exact [`DataBox`] identified by `self.data_box`.
+/// - **Base Values Initialization**: Every character's [`StatBox`] tracks all base values listed in
+///   [`ALL_CHAR_BASES`]. Base values without a static default ([`IQ`] and [`STRENGTH`]) must be
+///   populated in `character_data_box.stats` before calling [`Character::new_custom`]
+///   ([`Character::new_random`] handles this automatically). Skill-specific base values (such as
+///   science fields) are registered lazily when a skill impacting them is added.
+/// - **Trait & Skill Mutation**: Always mutate a character's traits and skills through [`Character`]
+///   methods (`add_trait`, `force_trait`, `remove_trait`, `add_skill`, `tick_skill_use`) rather than
+///   mutating [`CharacterTraitStore`] or [`StatBox`] directly, so that ref-counted flags in
+///   `DataBox.flags` and cached affinities on `Character.skills` stay synchronized.
 pub struct Character {
     pub name: CharacterName,
-    /// The character's data box
+    /// Slot ID of the character's [`DataBox`] in the runtime `SlotMap<DataBox>`.
     data_box: DataBoxSlotId,
     pub birthday: Utc,
-    // TODO: Retirement System with national retirement age, company benefits etc. At some point -
-    // Fixed date should work for a good while => 70th Birthday
-    // (Context: Global average in 2026 seems to be 60-65; tendency rising. (Denmark hits 70 in 2040))
+    /// Date at which the character reaches retirement age, initialized to
+    /// `birthday + RETIREMENT_AGE` (`70` years, calculated as `70 * 365 * 24` hours).
     pub retirement: Utc,
     pub teams: Vec<TeamBoxSlotId>,
-    /// The character's traits.
-    /// All traits must be unique.
+    /// The character's traits. All traits on a character are unique.
     traits: CharacterTraitStore,
     skills: Vec<CharacterSkill>,
 }
 impl Character {
+    /// Generates a new random character, populating `character_data_box` with rolled [`IQ`],
+    /// [`STRENGTH`], default [`ALL_CHAR_BASES`], trait flags, and age-normalized starting skills.
+    ///
+    /// # Expected Usage
+    /// `data_box_slot_map` must be the map containing the corresponding `DataBox` to `character_data_box_id`.
     pub fn new_random(
         utils: &mut Utils,
         character_data_box_id: DataBoxSlotId,
-        character_data_box: &mut DataBox,
+        data_box_slot_map: &mut SlotMap<DataBox>,
         utc_now: &Utc,
     ) -> SSCCResult<Character> {
+        let character_data_box = data_box_slot_map.get_mut(character_data_box_id).ok_or({
+            new_character_error("Cannot get Character's DataBox, Invalid ID")
+                .add_ctx(format!("ID: {:?}", character_data_box_id))
+        })?;
         let birthday = new_random_char_birthday(utils, utc_now)?;
         let looks = new_random_char_look(utils)?;
         let iq = new_random_char_iq(utils)?;
@@ -96,27 +123,30 @@ impl Character {
         let age_in_years = age_in_years / 60.0 / 60.0 / 24.0 / 365.2425;
         let mut char = Character::new_custom(
             character_data_box_id,
+            data_box_slot_map,
             traits,
             vec![],
             teams,
             birthday,
             name,
-            character_data_box,
         )?;
         for skill in new_random_char_skills(utils, age_in_years)? {
-            char.add_skill(skill, character_data_box, utc_now)?;
+            char.add_skill(skill, data_box_slot_map, utc_now)?;
         }
         Ok(char)
     }
-    /// Generates a new random character with one random 'ultra' level skill.
+    /// Generates a new random character with one random [`Level::Ultra`] skill (`Ultra(0..=2)`).
+    ///
+    /// # Expected Usage
+    /// `data_box_slot_map` must be the map containing the corresponding `DataBox` to `character_data_box_id`.
     pub fn new_random_one_ultra_skill(
         utils: &mut Utils,
         character_data_box_id: DataBoxSlotId,
-        character_data_box: &mut DataBox,
+        data_box_slot_map: &mut SlotMap<DataBox>,
         utc_now: &Utc,
     ) -> SSCCResult<Character> {
         let mut character =
-            Character::new_random(utils, character_data_box_id, character_data_box, utc_now)?;
+            Character::new_random(utils, character_data_box_id, data_box_slot_map, utc_now)?;
         let base = &SKILL_REGISTRY_OF_REGISTRIES[utils
             .rng
             .random_index(SKILL_REGISTRY_OF_REGISTRIES.len())
@@ -125,7 +155,7 @@ impl Character {
             .rng
             .random_index(base.len())
             .map_err(|err| err.to_nemesis_error())?];
-        character.add_skill(skill, character_data_box, utc_now)?;
+        character.add_skill(skill, data_box_slot_map, utc_now)?;
 
         let idx = character
             .skills
@@ -143,15 +173,30 @@ impl Character {
         skill_mut_ptr.set_level(Level::Ultra(new_level));
         Ok(character)
     }
+    /// Constructs a custom character and ensures all [`ALL_CHAR_BASES`] exist in `character_data_box.stats`.
+    ///
+    /// # Expected Usage & Unenforced Invariants
+    /// - Any base value in [`ALL_CHAR_BASES`] with a `None` default ([`IQ`] and [`STRENGTH`]) must
+    ///   already be present in `character_data_box.stats` prior to calling this function, or an
+    ///   error is returned.
+    /// - Unlike [`Character::new_random`], `new_custom` does **not** automatically copy flags from
+    ///   `traits` into `character_data_box.flags` or register base values for pre-supplied `skills`.
+    ///   Callers should either pre-populate `character_data_box` or add traits and skills after
+    ///   construction via [`Character::add_trait`] / [`Character::add_skill`].
+    /// - `data_box_slot_map` must be the map containing the corresponding `DataBox` to `character_data_box_id`.
     pub fn new_custom(
         character_data_box_id: DataBoxSlotId,
+        data_box_slot_map: &mut SlotMap<DataBox>,
         traits: CharacterTraitStore,
         skills: Vec<CharacterSkill>,
         teams: Vec<TeamBoxSlotId>,
         birthday: Utc,
         name: CharacterName,
-        character_data_box: &mut DataBox,
     ) -> SSCCResult<Character> {
+        let character_data_box = data_box_slot_map.get_mut(character_data_box_id).ok_or({
+            new_character_error("Cannot get Character's DataBox, Invalid ID")
+                .add_ctx(format!("ID: {:?}", character_data_box_id))
+        })?;
         for base in ALL_CHAR_BASES {
             if !character_data_box.is_tracking(base.0) {
                 if let Some(value) = base.1 {
@@ -176,6 +221,7 @@ impl Character {
             skills,
         })
     }
+    /// Returns a mutable reference to the character's [`FlagBox`].
     pub fn data_box_flag_box<'sm>(
         &self,
         data_box_slot_map: &'sm mut SlotMap<DataBox>,
@@ -187,10 +233,11 @@ impl Character {
                 .add_ctx(format!("DataBox {:?} no longer exists", self.data_box)))
         }
     }
-    /// Returns a mutable reference to the character's StatBox
+    /// Returns a mutable reference to the character's [`StatBox`].
     ///
-    /// DO NOT USE THIS TO CALL [`StatBox::get_full_stats`].
-    /// Use [`Character::get_full_stats`] instead for skills to apply.
+    /// # Important
+    /// DO NOT use this reference to call [`StatBox::get_full_stats`], as that bypasses both
+    /// character traits and character skills. Use [`Character::get_full_stats`] instead.
     pub fn data_box_stat_box<'sm>(
         &self,
         data_box_slot_map: &'sm mut SlotMap<DataBox>,
@@ -202,7 +249,22 @@ impl Character {
                 .add_ctx(format!("DataBox {:?} no longer exists", self.data_box)))
         }
     }
-    /// Remember to call [`Character::tick_skill_use`] if applicable!
+    /// Computes and returns all tracked stats for the character with `StatBox` modifiers,
+    /// character traits, and character skills applied.
+    ///
+    /// Remember to call [`Character::tick_skill_use`] when the caller uses the resulting stats
+    /// to perform an action!
+    ///
+    /// # Evaluation Pipeline
+    /// 1. **`StatBox` Modifiers**: Calls [`StatBox::get_full_stats`] to evaluate
+    ///    `(base + flat_modifiers) * percentage_modifiers` (including double-negative sign preservation).
+    /// 2. **Character Traits**: Applies `(stat + trait_flat_accum) * trait_perc_accum` from
+    ///    [`CharacterTraitStore::make_all_traits_accum`] to every stat already present in the object.
+    /// 3. **Character Skills**: Evaluates [`SkillStatImpact::calc_final_stat_impact`](crate::consts::characters::skills::SkillStatImpact::calc_final_stat_impact)
+    ///    using each skill's [`affinity`](CharacterSkill::affinity) and rust-adjusted
+    ///    [`effective_level`](CharacterSkill::effective_level). For each tracked stat, skill impacts
+    ///    are accumulated starting from `0.0` (applying sequential `Add`/`Sub`/`Mul`/`Div`, then
+    ///    highest `Lim`, then highest `Set`) and added flatly (`*stat = *stat + accum`) to the stat.
     pub fn get_full_stats(&self, data_box_slot_map: &SlotMap<DataBox>) -> SSCCResult<Object> {
         if let Some(data_box) = data_box_slot_map.get(self.data_box) {
             let mut stats = data_box.stats.get_full_stats();
@@ -275,17 +337,25 @@ impl Character {
             }
         }
     }
-    // TODO: Adds `(POINT_COST_LOW_LEVEL) / 10.0` as point value base
-    // Consider if a passed in base would be preferable
+    /// Records skill and base-value usage for a character, shaking off rust and awarding skill points
+    /// (or discovering new skills at [`Level::Low(0)`](Level::Low)).
+    ///
+    /// # Behavior
+    /// - **Base Points**: Awards `POINT_COST_LOW_LEVEL / 10.0` (`12.8`) raw points per used entry,
+    ///   which [`CharacterSkill::add_points`] multiplies by the skill's affinity.
+    /// - **Existing Skills**: For each skill name in `used_skills` and each master skill matching a
+    ///   base value in `used_base_values` (expanded via [`normalise_bvp_name`]), calls
+    ///   [`CharacterSkill::skill_used`] and [`CharacterSkill::add_points`].
+    /// - **Skill Discovery**: If a referenced skill in `used_skills` or master skill for
+    ///   `used_base_values` is not yet on the character, it is looked up in
+    ///   [`SKILL_REGISTRY_OF_REGISTRIES`] and added via [`Character::add_skill_at_low_zero_level`]
+    ///   without awarding points on the discovery tick.
     pub fn tick_skill_use(
         &mut self,
         data_box_slot_map: &mut SlotMap<DataBox>,
         used_base_values: Option<&[&'static str]>,
         used_skills: Option<&[&'static str]>,
     ) -> SSCCResult<()> {
-        let character_data_box: &mut DataBox = data_box_slot_map
-            .get_mut(self.data_box)
-            .ok_or(new_internal_error("Cannot get DataBox of Character!"))?;
         let points = HpFloat::cast(POINT_COST_LOW_LEVEL) / 10.0;
         if let Some(used_skills) = used_skills {
             for used_skill in used_skills {
@@ -301,7 +371,7 @@ impl Character {
                 } else {
                     // Skill doesnt exist and needs to be added
                     if let Some(needed_skill) = get_skill_from_registry_by_name(used_skill) {
-                        self.add_skill_at_low_zero_level(needed_skill, character_data_box)?;
+                        self.add_skill_at_low_zero_level(needed_skill, data_box_slot_map)?;
                     };
                 }
             }
@@ -328,23 +398,24 @@ impl Character {
                 } else {
                     // No skill present / Or no master skill to push
                     if let Some(needed_skill) = get_master_skill_for_base_value(used_bv) {
-                        self.add_skill_at_low_zero_level(needed_skill, character_data_box)?;
+                        self.add_skill_at_low_zero_level(needed_skill, data_box_slot_map)?;
                     };
                 }
             }
         }
         Ok(())
     }
-    /// Call to advance rust on all skills
+    /// Advances the idle rust counter on all of the character's skills by one simulation tick.
     pub fn tick_skills_rust(&mut self) {
         self.skills
             .iter_mut()
             .for_each(|skill| skill.simulation_tick());
     }
-    /// Add a trait via its name.
+    /// Looks up a trait by name in [`TRAIT_REGISTRY_OF_REGISTRIES`](crate::consts::characters::traits::registries::TRAIT_REGISTRY_OF_REGISTRIES)
+    /// and attempts to add it via [`Character::add_trait`].
     ///
     /// # Errors
-    /// Should the supplied trait name not exists in any registry.
+    /// Returns an error if `trait_name` does not exist in any trait registry.
     pub fn add_trait_via_name(
         &mut self,
         trait_name: &str,
@@ -357,12 +428,17 @@ impl Character {
         );
         Ok(())
     }
-    /// Adds the supplied trait onto the character.
+    /// Attempts to add `character_trait` to the character, syncing its flags to `DataBox.flags`
+    /// and recalculating skill affinities if added.
     ///
-    /// Will only add the trait if an optional trait was not present, or if it is a `general`
-    /// trait.
+    /// Only adds the trait if:
+    /// - It is an optional single-slot trait (`Health`, `MentalHealth`, `Social`, `WorkEthics`) whose
+    ///   slot is currently `None`, or
+    /// - It is a [`CharacterTraitKind::Normal`] trait that is not already present and does not
+    ///   conflict with any existing `Normal` trait.
     ///
-    /// Use [`Character::force_trait`] to force the supplied trait onto the character.
+    /// Mandatory single-slot traits (`Intellect`, `Looks`) are never overwritten by `add_trait`.
+    /// Use [`Character::force_trait`] to overwrite occupied slots or conflicting traits.
     pub fn add_trait(
         &mut self,
         character_trait: &'static CharacterTrait,
@@ -382,9 +458,11 @@ impl Character {
                 .add_flag(*flag);
         }
     }
-    /// Forces the supplied new trait onto the character.
+    /// Forces `character_trait` onto the character, removing any traits listed in
+    /// [`CharacterTrait::conflicting_traits`], overwriting the target slot in [`CharacterTraitStore`],
+    /// adding the new trait's flags to `DataBox.flags`, and recalculating all skill affinities.
     ///
-    /// Consider using [`Character::add_trait`]
+    /// Consider using [`Character::add_trait`] when existing traits should not be overwritten.
     pub fn force_trait(
         &mut self,
         character_trait: &'static CharacterTrait,
@@ -402,6 +480,13 @@ impl Character {
             .iter_mut()
             .for_each(|entry| entry.update_from_traits(&self.traits.get_all_traits()));
     }
+    /// Removes `character_trait` from the character if present, decrementing its flags in
+    /// `DataBox.flags` and recalculating all skill affinities.
+    ///
+    /// # Expected Usage
+    /// Mandatory traits ([`CharacterTraitKind::Intellect`] and [`CharacterTraitKind::Looks`])
+    /// cannot be removed; calling `remove_trait` with one is a no-op. Replace them via
+    /// [`Character::force_trait`] instead.
     pub fn remove_trait(
         &mut self,
         character_trait: &'static CharacterTrait,
@@ -411,7 +496,7 @@ impl Character {
             if r#trait.kind == CharacterTraitKind::Intellect
                 || r#trait.kind == CharacterTraitKind::Looks
             {
-                // Cannot remove really, Only update via `force_trait`
+                // Cannot remove mandatory traits; only replace via `force_trait`
             } else {
                 for flag in character_trait.flags() {
                     self.data_box_flag_box(data_box_slot_map)
@@ -425,16 +510,22 @@ impl Character {
             }
         }
     }
-    /// Adds a Skill to the character.
+    /// Adds a skill to the character with an initial level normalized from the character's age,
+    /// base [`IQ`], and affinity for the skill.
     ///
-    /// The level of the skill will be appropriate for the age & affinity of the character.
-    /// The higer the result, the higher the level.
+    /// If the character already possesses `skill`, this is a no-op and returns `Ok(())`.
+    /// Any untracked base values impacted by `skill` are automatically added to
+    /// `character_data_box.stats` with their default values from [`get_bvp_by_bv_name`].
     ///
-    /// To add a skill at `Level::Low(0)`, use [`Character::add_skill_at_low_zero_level`]
+    /// To add a skill starting at `Level::Low(0)`, use [`Character::add_skill_at_low_zero_level`].
+    ///
+    /// # Future Changes
+    /// This method will be refactored to accept `&mut SlotMap<DataBox>` and look up `self.data_box`
+    /// directly instead of taking `character_data_box: &mut DataBox`.
     pub fn add_skill(
         &mut self,
         skill: &'static ConstSkill,
-        character_data_box: &mut DataBox,
+        data_box_slot_map: &mut SlotMap<DataBox>,
         utc_now: &Utc,
     ) -> SSCCResult<()> {
         if self.skills.iter().any(|s| s.skill.name == skill.name) {
@@ -442,34 +533,48 @@ impl Character {
         };
         let age_in_years =
             HpFloat::cast((*utc_now - self.birthday).as_secs()) / 60.0 / 60.0 / 24.0 / 365.2425;
-        self.add_skill_internal(skill, character_data_box, age_in_years)
+        self.add_skill_internal(skill, data_box_slot_map, age_in_years)
     }
-    /// Adds a skill with `Level::Low(0)`.
+    /// Adds a skill to the character starting at `Level::Low(0)`.
+    ///
+    /// If the character already possesses `skill`, this is a no-op and returns `Ok(())`.
+    /// Any untracked base values impacted by `skill` are automatically added to
+    /// `character_data_box.stats` with their default values from [`get_bvp_by_bv_name`].
+    ///
+    /// # Future Changes
+    /// This method will be refactored to accept `&mut SlotMap<DataBox>` and look up `self.data_box`
+    /// directly instead of taking `character_data_box: &mut DataBox`.
     pub fn add_skill_at_low_zero_level(
         &mut self,
         skill: &'static ConstSkill,
-        character_data_box: &mut DataBox,
+        data_box_slot_map: &mut SlotMap<DataBox>,
     ) -> SSCCResult<()> {
         if self.skills.iter().any(|s| s.skill.name == skill.name) {
             return Ok(());
         };
-        // NOTE: uses `-1` (any negative) as a magic number to skip
-        // leveling the skill up
-        self.add_skill_internal(skill, character_data_box, HpFloat::from(-1.0))
+        // Uses `-1.0` (any non-positive value) as a sentinel to skip age/IQ level normalization
+        self.add_skill_internal(skill, data_box_slot_map, HpFloat::from(-1.0))
     }
-    /// # Note
+    /// Internal helper for adding a skill and registering its impacted base values in `character_data_box.stats`.
     ///
-    /// Passing in any negative value for `age_in_years` skips the level construction based on
-    /// age.
+    /// # Expected Usage
+    /// - Passing a non-positive value for `age_in_years` skips initial level normalization and
+    ///   leaves the skill at `Level::Low(0)`.
+    /// - Every base value impacted by `skill` must exist in [`REGISTRY_OF_BASE_VALUE_REGISTRIES`](crate::consts::base_values::REGISTRY_OF_BASE_VALUE_REGISTRIES)
+    ///   with a `Some(default)` value if it is not already tracked in `character_data_box.stats`.
     fn add_skill_internal(
         &mut self,
         skill: &'static ConstSkill,
-        character_data_box: &mut DataBox,
+        data_box_slot_map: &mut SlotMap<DataBox>,
         age_in_years: HpFloat,
     ) -> SSCCResult<()> {
         if self.skills.iter().any(|s| s.skill.name == skill.name) {
             return Ok(());
         };
+        let character_data_box = data_box_slot_map.get_mut(self.data_box).ok_or({
+            new_character_error("Cannot get Character's DataBox, Invalid ID")
+                .add_ctx(format!("ID: {:?}", self.data_box))
+        })?;
         let mut skill = CharacterSkill::new(skill, &self.traits.get_all_traits());
         if let Some(iq) = character_data_box.stats.get_base_value(IQ.0)
             && let Some(iq) = iq.as_hp_float()

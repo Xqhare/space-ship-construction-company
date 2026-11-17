@@ -28,6 +28,15 @@ pub mod registries;
 
 pub const MAX_SKILL_SECONDARIES: usize = 10;
 
+/// Compile-time definition of a character skill and the base values it impacts.
+///
+/// # Expected Usage & Registry Invariants
+/// - Every `ConstSkill` must be registered in [`SKILL_REGISTRY_OF_REGISTRIES`](registries::SKILL_REGISTRY_OF_REGISTRIES)
+///   with a globally unique `name`.
+/// - At most one `ConstSkill` across all registries may declare a given `base_value_name` as its
+///   `master` impact (enforced by unit tests in [`registries`]).
+/// - Up to [`MAX_SKILL_SECONDARIES`] (`10`) secondary impacts can be attached via
+///   [`ConstSkill::with_secondaries`] (checked at compile time).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConstSkill {
     pub name: &'static str,
@@ -81,6 +90,12 @@ impl ConstSkill {
     }
 }
 
+/// Defines how a [`ConstSkill`] impacts a specific base value (or base value group key).
+///
+/// # Expected Usage
+/// [`SkillStatImpact::new`] initializes `factor` to `0.0` and `op` to [`Op::Add`]; callers
+/// defining skills in registries should chain [`SkillStatImpact::with_factor`] (and optionally
+/// [`SkillStatImpact::with_op`]).
 #[derive(Clone, Copy, Debug)]
 pub struct SkillStatImpact {
     pub base_value_name: &'static str,
@@ -127,7 +142,17 @@ impl SkillStatImpact {
         self.op = op;
         self
     }
-    // TODO: Move away from the constant offsets to offsets based on LEVEL_*_AMOUNT
+    /// Computes the `(final_factor, op)` stat impact for a skill given its `aff` (affinity) and
+    /// rust-adjusted `effective_level`.
+    ///
+    /// # Formula
+    /// Maps `effective_level` to a tiered `base_level` with non-linear jumps between tiers:
+    /// - `Level::Low(0..=9)` -> `1..=10`
+    /// - `Level::Medium(0..=9)` -> `12..=21`
+    /// - `Level::High(0..=9)` -> `25..=34`
+    /// - `Level::Ultra(0..=2)` -> `50, 55, 60`
+    ///
+    /// Then returns `(self.factor * (base_level * aff), self.op)`.
     pub fn calc_final_stat_impact(&self, aff: &HpFloat, effective_level: Level) -> (HpFloat, Op) {
         let base_level = match effective_level {
             Level::Low(inner) => 1 + inner,          // 1..=10

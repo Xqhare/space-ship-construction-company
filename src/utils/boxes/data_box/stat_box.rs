@@ -154,14 +154,14 @@ impl StatBox {
     /// Both the flat and percentage accumulators evaluate their modifier lists using the same rules:
     ///
     /// 1. **Sequential Arithmetic** (evaluated in order of appearance):
-    ///    * [`ModifierOp::Add`] / [`ModifierOp::Sub`]: Adds to or subtracts from the accumulator.
-    ///    * [`ModifierOp::Mul`] / [`ModifierOp::Div`]: Multiplies or divides the current accumulator.
+    ///    * [`Op::Add`] / [`Op::Sub`]: Adds to or subtracts from the accumulator.
+    ///    * [`Op::Mul`] / [`Op::Div`]: Multiplies or divides the current accumulator.
     ///      *(Note: Should the accumulator be 0.0 and any multiplication is attempted, the resultant value will be the modifier value).*
     ///      *(Note: a division by `0.0` will be ignored and not do anything)*
-    /// 2. **Upper Bound ([`ModifierOp::Lim`])**: Applied after all arithmetic operations. Caps the
+    /// 2. **Upper Bound ([`Op::Lim`])**: Applied after all arithmetic operations. Caps the
     ///    accumulator at the specified maximum. If multiple `Lim` modifiers exist for the same stat,
     ///    the **highest** limit takes precedence.
-    /// 3. **Absolute Override ([`ModifierOp::Set`])**: Applied last, overriding both arithmetic results
+    /// 3. **Absolute Override ([`Op::Set`])**: Applied last, overriding both arithmetic results
     ///    and any `Lim` caps. If multiple `Set` modifiers exist, the **highest** value takes precedence.
     ///
     /// # Panics
@@ -187,8 +187,6 @@ impl StatBox {
     /// Add a base value
     ///
     /// If a base value with the key exists, it will be overwritten
-    ///
-    /// Does not update unused modifiers, use `update_unused_modifiers` after calling this.
     pub fn add_base_value<S: Into<String>>(&mut self, key: S, value: &HpFloat) {
         self.base_values.insert(key, xff!(*value));
         self.update_unused_modifiers();
@@ -324,7 +322,7 @@ impl StatBox {
     ///
     /// Does not extend base values at all.
     ///
-    /// Assumes that base values of `other` already exist in `self`.
+    /// Assumes that *all* base values of `other` already exist in `self`.
     ///
     /// Designed to be used inside `extend`
     fn extend_modifiers(&mut self, other: &StatBox) {

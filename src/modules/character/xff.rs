@@ -14,7 +14,7 @@ const DATA_BOX_FIELD: &str = "data_box";
 const BIRTHDAY_FIELD: &str = "birthday";
 const RETIREMENT_FIELD: &str = "retirement";
 const TEAMS_FIELD: &str = "teams";
-const TRAITS_FIELD: &str = "trais";
+const TRAITS_FIELD: &str = "traits";
 const SKILLS_FIELD: &str = "skills";
 
 impl XffSerde for Character {

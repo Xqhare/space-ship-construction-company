@@ -33,11 +33,13 @@ use crate::{
     },
 };
 
+/// Rolls a random IQ value (`50..=149`) and its corresponding [`CharacterTraitKind::Intellect`](crate::consts::characters::traits::CharacterTraitKind::Intellect) trait.
+///
 /// Based on a normalized & capped Terman & Merrill (1960) distribution:
 ///
 /// | # | Trait | IQ Range | Probability | Terman & Merrill Ref |
 /// | --- | --- | --- | --- | --- |
-/// | 1 | **Genius** | 140–149 | `1.5625%` | 1.1% (140–169: 1.33%) |
+/// | 1 | **Genius** | 140–149 | `1.5625%` | 1.1% |
 /// | 2 | **Astute** | 130–139 | `3.125%` | 3.1% |
 /// | 3 | **Shrewd** | 120–129 | `6.25%` | 8.2% |
 /// | 4 | **Smart** | 110–119 | `12.5%` | 18.1% |
@@ -46,7 +48,7 @@ use crate::{
 /// | 7 | **Dull** | 80–89 | `12.5%` | 14.5% |
 /// | 8 | **Dense** | 70–79 | `6.25%` | 5.6% |
 /// | 9 | **Dimwit** | 60–69 | `3.125%` | 2.0% |
-/// | 10 | **Simpleton** | 40–59 | `1.5625%` | 0.63% |
+/// | 10 | **Simpleton** | 50–59 | `1.5625%` | 0.63% |
 pub fn new_random_char_iq(utils: &mut Utils) -> SSCCResult<(HpFloat, &'static CharacterTrait)> {
     if rand_bool(utils)? {
         if rand_bool(utils)? {
@@ -148,6 +150,7 @@ pub fn new_random_char_look(utils: &mut Utils) -> SSCCResult<&'static CharacterT
     }
 }
 
+/// Rolls a random base strength value in the range `0.0..DEFAULT_CHAR_BASE_VALUE_VALUE` (`0.0..1000.0`).
 pub fn new_random_char_strength(utils: &mut Utils) -> SSCCResult<HpFloat> {
     Ok(HpFloat::from(
         utils
@@ -157,6 +160,15 @@ pub fn new_random_char_strength(utils: &mut Utils) -> SSCCResult<HpFloat> {
     ))
 }
 
+/// Generates a random character birthday relative to `utc_now`, skewed toward younger employees.
+///
+/// # Age Bracket Distribution
+/// - `50.0%`: `18..(RETIREMENT_AGE / 3)` (`18..23`)
+/// - `37.5%`: `18..(RETIREMENT_AGE / 2)` (`18..35`)
+/// - `12.5%`: `18..RETIREMENT_AGE` (`18..70`)
+///
+/// # Expected Usage
+/// Assumes `utc_now.date().year > RETIREMENT_AGE` (`70`).
 pub fn new_random_char_birthday(utils: &mut Utils, utc_now: &Utc) -> SSCCResult<Utc> {
     let ceiling = {
         if rand_bool(utils)? {
@@ -187,11 +199,17 @@ pub fn new_random_char_birthday(utils: &mut Utils, utc_now: &Utc) -> SSCCResult<
     let days_dur_in_h = Duration::from_secs(
         utils
             .rng
-            .random_from_range_inclusive(1, 31 * 24 * 60 * 60)
+            .random_from_range_inclusive(0, 31 * 24 * 60 * 60)
             .map_err(|err| err.to_nemesis_error())? as u64,
     );
     Ok(Utc::from_ymd_hms(year, month, 1, 0, 0, 0) + days_dur_in_h)
 }
+
+/// Selects a random list of initial skills from [`SKILL_REGISTRY_OF_REGISTRIES`] scaled by `age_in_years`.
+///
+/// # Expected Usage
+/// - Assumes `age_in_years` is positive; the maximum number of rolls is `trunc(10 + 10 * (age_in_years / 100))`.
+/// - The returned `Vec` may contain duplicate [`ConstSkill`] references, which [`Character::add_skill`](super::Character::add_skill) deduplicates when adding them to a character.
 pub fn new_random_char_skills(
     utils: &mut Utils,
     age_in_years: HpFloat,

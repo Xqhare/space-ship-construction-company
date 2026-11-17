@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use athena::float::HpFloat;
 use fortuna::Fortuna;
 use tyche::RngApi;
@@ -6,9 +8,22 @@ use crate::error::SSCCResult;
 
 // NOTE: Rust derives PartialOrd/Ord on enums in variant declaration order (Low < Medium < High < Ultra) and then compares the inner u8
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-/// All inner `u8` values must be `< LEVEL_AMOUNT_*` for their tier.
+/// Represents a character skill's tier and sub-level.
 ///
-/// Implements `Eq` and `Ord`
+/// Implements `Eq` and `Ord` in tier progression order (`Low < Medium < High < Ultra`),
+/// then by the inner `u8` sub-level.
+///
+/// # Expected Usage & Unenforced Invariants
+/// - All inner `u8` values are expected to be `< SKILL_LEVEL_*_AMOUNT` for their tier:
+///   - `Level::Low(0..=9)` (`< SKILL_LEVEL_LOW_AMOUNT (10)`)
+///   - `Level::Medium(0..=9)` (`< SKILL_LEVEL_MEDIUM_AMOUNT (10)`)
+///   - `Level::High(0..=9)` (`< SKILL_LEVEL_HIGH_AMOUNT (10)`)
+///   - `Level::Ultra(0..=2)` (`< SKILL_LEVEL_ULTRA_AMOUNT (3)`)
+/// - Direct enum variant construction (e.g. `Level::Low(25)`) does **not** enforce this bound.
+///   An out-of-range inner `u8` will skew [`Level::to_ordinal`] and [`calc_final_point_cost_for_level`].
+///   Prefer [`Level::from_ordinal`], [`Level::level_up`], and [`Level::level_down`] to guarantee
+///   valid sub-levels.
+///   The out-of-range inner may (probably) lead to a crash as no skill level name can be constructed from it when displaying it in the game UI.
 pub enum Level {
     Low(u8),
     Medium(u8),
@@ -16,8 +31,19 @@ pub enum Level {
     Ultra(u8),
 }
 
+impl Display for Level {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Level::Low(level) => write!(f, "{}", SKILL_LEVEL_LOW_REGISTRY[*level as usize]),
+            Level::Medium(level) => write!(f, "{}", SKILL_LEVEL_MEDIUM_REGISTRY[*level as usize]),
+            Level::High(level) => write!(f, "{}", SKILL_LEVEL_HIGH_REGISTRY[*level as usize]),
+            Level::Ultra(level) => write!(f, "{}", SKILL_LEVEL_ULTRA_REGISTRY[*level as usize]),
+        }
+    }
+}
+
 impl Level {
-    /// Cast the level into the range 0..TOTAL_SKILL_LEVEL_AMOUNT
+    /// Converts the level into a flat ordinal in the range `0..SKILL_LEVEL_TOTAL_AMOUNT` (`0..=32`).
     pub fn to_ordinal(&self) -> u8 {
         match self {
             Level::Low(level) => *level,
@@ -69,13 +95,19 @@ impl Level {
 }
 
 // NOTE: Because of the per-level cost formula, the distance between tiers should always be COST * 2 at a minimum.
-pub const POINT_COST_LOW_LEVEL: u16 = 128; // Lets see if this needs to change
+pub const POINT_COST_LOW_LEVEL: u16 = 128;
 pub const POINT_COST_MEDIUM_LEVEL: u16 = POINT_COST_LOW_LEVEL * 2;
 pub const POINT_COST_HIGH_LEVEL: u16 = POINT_COST_MEDIUM_LEVEL * 4;
 pub const POINT_COST_ULTRA_LEVEL: u16 = POINT_COST_HIGH_LEVEL * 6;
 
-/// Formula:
-/// final_points_cost_of_level = round_down((1 + (level / LEVEL_AMOUNT)) * POINT_COST)
+/// Calculates the exact point cost required to advance from `level` to the next sub-level.
+///
+/// # Formula
+/// ```text
+/// final_points_cost_of_level = (1.0 + (sub_level / SKILL_LEVEL_*_AMOUNT)) * POINT_COST_*_LEVEL
+/// ```
+/// Sub-level `0` of a tier costs `1.0 * POINT_COST_*_LEVEL`, scaling linearly within the tier
+/// toward `2.0 * POINT_COST_*_LEVEL`.
 pub fn calc_final_point_cost_for_level(level: Level) -> HpFloat {
     let (base_cost, level) = {
         match level {
@@ -103,8 +135,7 @@ pub fn calc_final_point_cost_for_level(level: Level) -> HpFloat {
         "Something went terribly wrong; Final level points cost for level '{level:?}' is lower than the lowest cost defined! Cost: '{tmp}' < '{POINT_COST_LOW_LEVEL}'"
     );
     if tmp <= HpFloat::new(POINT_COST_LOW_LEVEL as i128, 0) {
-        // For prod lets play it safe with a sane default value return
-        // TODO: Consider if returning the Ultra level cost would be more fitting?
+        // Production fallback: clamp to the minimum defined level cost
         HpFloat::new(POINT_COST_LOW_LEVEL as i128, 0)
     } else {
         tmp

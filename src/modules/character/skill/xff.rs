@@ -77,13 +77,13 @@ impl XffSerde for CharacterSkill {
                 })
             } else {
                 Err(
-                    new_xff_serde_error("Cannot parse CharacterName; Required fields missing!")
+                    new_xff_serde_error("Cannot parse CharacterSkill; Required fields missing!")
                         .add_ctx(format!("Value: '{xff:?}'")),
                 )
             }
         } else {
             Err(
-                new_xff_serde_error("Cannot parse CharacterName; XffValue not an object!")
+                new_xff_serde_error("Cannot parse CharacterSkill; XffValue not an object!")
                     .add_ctx(format!("{xff:?}")),
             )
         }

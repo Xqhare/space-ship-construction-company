@@ -4,3 +4,6 @@
         * Should do something in contrast to the bumpscosity in Stanley Parable
         * Possible values: 0-1000; 0 = Min / off; 1000 = Max; 1 = default
         * Bumpscosity could be the rate of easter eggs in the game?
+        * A sleep in millis? 'Bumpscosity is very time intensive!' (0 and Default would just skip the sleep)
+        * # of special events per decade?
+        * I like the Tooltip: 'Change only if familiar and knowledgeable of the normal game'

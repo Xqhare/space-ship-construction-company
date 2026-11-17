@@ -1,0 +1,14 @@
+- [ ] Retirement system :: Implement national retirement age and company retirement benefits @src/modules/character/mod.rs +feature
+    * Currently uses fixed 70th birthday via RETIREMENT_AGE
+- [x] (1) Query SlotMap in add_skill methods :: Refactor add_skill and add_skill_at_low_zero_level to accept SlotMap<DataBox> and query self.data_box instead of taking a mutable DataBox reference @src/modules/character/mod.rs +refactor
+- [ ] (9) Use modified IQ for skill normalization :: Consider using character IQ with modifiers applied in add_skill_internal instead of querying raw base value from StatBox @src/modules/character/mod.rs +refactor
+- [ ] (6) Configurable skill tick base points :: Consider passing in base point value to tick_skill_use instead of hardcoding POINT_COST_LOW_LEVEL / 10.0 @src/modules/character/mod.rs +refactor
+- [ ] (3) Trait mutation error handling and flag cleanup :: @src/modules/character/mod.rs +bug +refactor
+    - [ ] Replace expect calls in trait helpers :: Return SSCCResult from add_flags, force_trait, and remove_trait instead of panicking on missing DataBox or trait lookup @src/modules/character/mod.rs +refactor
+    - [ ] Clean up overwritten single-slot trait flags :: Ensure force_trait removes DataBox flags of overwritten single-slot traits @src/modules/character/mod.rs +bug
+- [ ] (3) Multi-level advancement in add_points :: Consider allowing a single CharacterSkill::add_points call to increment across multiple levels up to Level::Ultra(MAX) @src/modules/character/skill/mod.rs +refactor
+- [ ] Rename normalise_char_skill_from_char :: Find a clearer method name for initial skill level normalization @src/modules/character/skill/mod.rs +refactor
+- [ ] Derive skill stat impact offsets from constants :: Replace hardcoded tier offsets in SkillStatImpact::calc_final_stat_impact with offsets computed from SKILL_LEVEL_*_AMOUNT @src/consts/characters/skills/mod.rs +refactor
+- [c] Evaluate level cost fallback value :: Consider returning POINT_COST_ULTRA_LEVEL instead of POINT_COST_LOW_LEVEL when calculated cost falls below minimum @src/consts/characters/skills/levels.rs +refactor
+- [ ] Balance character trait modifier values :: Audit and balance stat impact and affinity values across all trait registries @src/consts/characters/traits/registries/mod.rs +refactor
+    * Check Percentage vs Flat impacts on SOCIABILITY in intellect and health registries

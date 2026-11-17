@@ -6,6 +6,10 @@ use crate::{
     utils::Utils,
 };
 
+/// Holds the name components of a [`Character`](super::Character).
+///
+/// When serialized via [`XffSerde`], `middle_name` is omitted from the resulting [`Object`]
+/// if it is `None`.
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq)]
 pub struct CharacterName {
@@ -17,7 +21,7 @@ pub struct CharacterName {
 }
 
 impl CharacterName {
-    /// Generates a random character name
+    /// Generates a random character name using [`Utils::word_smith`](crate::utils::Utils).
     pub fn new_random(utils: &mut Utils) -> SSCCResult<Self> {
         let pers = utils
             .word_smith
